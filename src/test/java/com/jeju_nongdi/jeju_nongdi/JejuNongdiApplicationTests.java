@@ -8,7 +8,6 @@ class JejuNongdiApplicationTests {
 
 	@Test
 	void contextLoads() {
-
 	}
 
 }
