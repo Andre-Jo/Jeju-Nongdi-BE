@@ -9,4 +9,5 @@ public class JejuNongdiApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(JejuNongdiApplication.class, args);
 	}
+
 }
