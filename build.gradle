@@ -28,16 +28,58 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	
+	// JWT 관련 의존성
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+	implementation 'io.jsonwebtoken:jjwt-impl:0.12.3'
+	implementation 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.h2database:h2'
 	runtimeOnly 'com.mysql:mysql-connector-j'
+	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
 }
+
 
 tasks.named('test') {
 	useJUnitPlatform()
+
+	// 최소 설정으로 단순화
+	maxParallelForks = 1
+	forkEvery = 0  // JVM 재사용
+
+	// 기본 로깅만
+	testLogging {
+		events "failed"
+	}
+
+	// JVM 옵션 최소화
+	jvmArgs = ['-Xmx512m']
+}
+
+// 단위 테스트만 실행
+task unitTest(type: Test) {
+	useJUnitPlatform {
+		excludeTags 'integration', 'performance'
+	}
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	maxParallelForks = 1
+}
+
+// 통합 테스트만 실행
+task integrationTest(type: Test) {
+	useJUnitPlatform {
+		includeTags 'integration'
+	}
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	maxParallelForks = 1
 }
