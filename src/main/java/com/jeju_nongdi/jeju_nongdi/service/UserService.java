@@ -4,6 +4,8 @@ import com.jeju_nongdi.jeju_nongdi.dto.AuthResponse;
 import com.jeju_nongdi.jeju_nongdi.dto.LoginRequest;
 import com.jeju_nongdi.jeju_nongdi.dto.SignupRequest;
 import com.jeju_nongdi.jeju_nongdi.entity.User;
+import com.jeju_nongdi.jeju_nongdi.exception.EmailAlreadyExistsException;
+import com.jeju_nongdi.jeju_nongdi.exception.NicknameAlreadyExistsException;
 import com.jeju_nongdi.jeju_nongdi.repository.UserRepository;
 import com.jeju_nongdi.jeju_nongdi.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +29,12 @@ public class UserService {
     public AuthResponse signup(SignupRequest request) {
         // 이메일 중복 검사
         if (userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("이미 사용 중인 이메일입니다.");
+            throw new EmailAlreadyExistsException("이미 사용 중인 이메일입니다.");
         }
 
         // 닉네임 중복 검사
         if (userRepository.existsByNickname(request.nickname())) {
-            throw new RuntimeException("이미 사용 중인 닉네임입니다.");
+            throw new NicknameAlreadyExistsException("이미 사용 중인 닉네임입니다.");
         }
 
         // 사용자 생성

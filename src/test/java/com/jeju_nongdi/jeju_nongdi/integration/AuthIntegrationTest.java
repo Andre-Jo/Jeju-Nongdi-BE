@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -59,6 +60,7 @@ public class AuthIntegrationTest {
     void signupAndLoginIntegrationTest() throws Exception {
         // 1. 회원가입 테스트
         MvcResult signupResult = mockMvc.perform(post("/api/auth/signup")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(signupRequest)))
                 .andDo(print())
@@ -80,6 +82,7 @@ public class AuthIntegrationTest {
 
         // 3. 로그인 테스트
         mockMvc.perform(post("/api/auth/login")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andDo(print())
@@ -94,6 +97,7 @@ public class AuthIntegrationTest {
     void loginFailWithWrongPasswordTest() throws Exception {
         // 1. 회원가입
         mockMvc.perform(post("/api/auth/signup")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(signupRequest)))
                 .andExpect(status().isOk());
@@ -102,6 +106,7 @@ public class AuthIntegrationTest {
         LoginRequest wrongPasswordRequest = new LoginRequest(loginRequest.email(), "wrongpassword");
 
         mockMvc.perform(post("/api/auth/login")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(wrongPasswordRequest)))
                 .andDo(print())
@@ -113,12 +118,14 @@ public class AuthIntegrationTest {
     void duplicateSignupFailTest() throws Exception {
         // 1. 첫 번째 회원가입
         mockMvc.perform(post("/api/auth/signup")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(signupRequest)))
                 .andExpect(status().isOk());
 
         // 2. 동일한 이메일로 두 번째 회원가입 시도
         mockMvc.perform(post("/api/auth/signup")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(signupRequest)))
                 .andDo(print())

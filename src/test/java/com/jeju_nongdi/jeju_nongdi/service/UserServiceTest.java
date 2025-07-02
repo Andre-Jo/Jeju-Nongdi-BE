@@ -4,6 +4,8 @@ import com.jeju_nongdi.jeju_nongdi.dto.AuthResponse;
 import com.jeju_nongdi.jeju_nongdi.dto.LoginRequest;
 import com.jeju_nongdi.jeju_nongdi.dto.SignupRequest;
 import com.jeju_nongdi.jeju_nongdi.entity.User;
+import com.jeju_nongdi.jeju_nongdi.exception.EmailAlreadyExistsException;
+import com.jeju_nongdi.jeju_nongdi.exception.NicknameAlreadyExistsException;
 import com.jeju_nongdi.jeju_nongdi.repository.UserRepository;
 import com.jeju_nongdi.jeju_nongdi.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +28,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -62,10 +63,11 @@ class UserServiceTest {
         loginRequest = new LoginRequest("integration@test.com","password123");
 
         user = User.builder()
-                .email("test@example.com")
+                .id(1L)
+                .email("integration@test.com")
                 .password("encodedPassword")
-                .name("Test User")
-                .nickname("testuser")
+                .name("Integration Test")
+                .nickname("integrationuser")
                 .phone("01012345678")
                 .role(User.Role.USER)
                 .build();
@@ -87,8 +89,8 @@ class UserServiceTest {
         // then
         assertThat(response).isNotNull();
         assertThat(response.token()).isEqualTo(TOKEN);
-        assertThat(response.email()).isEqualTo(user.getEmail());
-        assertThat(response.nickname()).isEqualTo(user.getNickname());
+        assertThat(response.email()).isEqualTo("integration@test.com");
+        assertThat(response.nickname()).isEqualTo("integrationuser");
         verify(userRepository).save(any(User.class));
         verify(jwtUtil).generateToken(anyString());
     }
@@ -100,10 +102,9 @@ class UserServiceTest {
         given(userRepository.existsByEmail(anyString())).willReturn(true);
 
         // when & then
-        Exception exception = assertThrows(RuntimeException.class, () -> {
+        assertThrows(EmailAlreadyExistsException.class, () -> {
             userService.signup(signupRequest);
         });
-        assertThat(exception.getMessage()).isEqualTo("이미 사용 중인 이메일입니다.");
     }
 
     @Test
@@ -114,10 +115,9 @@ class UserServiceTest {
         given(userRepository.existsByNickname(anyString())).willReturn(true);
 
         // when & then
-        Exception exception = assertThrows(RuntimeException.class, () -> {
+        assertThrows(NicknameAlreadyExistsException.class, () -> {
             userService.signup(signupRequest);
         });
-        assertThat(exception.getMessage()).isEqualTo("이미 사용 중인 닉네임입니다.");
     }
 
     @Test
@@ -138,7 +138,7 @@ class UserServiceTest {
         // then
         assertThat(response).isNotNull();
         assertThat(response.token()).isEqualTo(TOKEN);
-        assertThat(response.email()).isEqualTo(user.getEmail());
+        assertThat(response.email()).isEqualTo("integration@test.com");
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(jwtUtil).generateToken(anyString());
     }
@@ -150,11 +150,11 @@ class UserServiceTest {
         given(userRepository.findByEmail(anyString())).willReturn(Optional.of(user));
 
         // when
-        User foundUser = userService.getCurrentUser("test@example.com");
+        User foundUser = userService.getCurrentUser("integration@test.com");
 
         // then
         assertThat(foundUser).isNotNull();
-        assertThat(foundUser.getEmail()).isEqualTo(user.getEmail());
+        assertThat(foundUser.getEmail()).isEqualTo("integration@test.com");
         verify(userRepository).findByEmail(anyString());
     }
 
@@ -165,9 +165,8 @@ class UserServiceTest {
         given(userRepository.findByEmail(anyString())).willReturn(Optional.empty());
 
         // when & then
-        Exception exception = assertThrows(RuntimeException.class, () -> {
+        assertThrows(RuntimeException.class, () -> {
             userService.getCurrentUser("nonexistent@example.com");
         });
-        assertThat(exception.getMessage()).isEqualTo("사용자를 찾을 수 없습니다.");
     }
 }

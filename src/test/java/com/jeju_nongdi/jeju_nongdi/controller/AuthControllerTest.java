@@ -5,13 +5,17 @@ import com.jeju_nongdi.jeju_nongdi.dto.AuthResponse;
 import com.jeju_nongdi.jeju_nongdi.dto.LoginRequest;
 import com.jeju_nongdi.jeju_nongdi.dto.SignupRequest;
 import com.jeju_nongdi.jeju_nongdi.entity.User;
+import com.jeju_nongdi.jeju_nongdi.service.CustomUserDetailsService;
 import com.jeju_nongdi.jeju_nongdi.service.UserService;
+import com.jeju_nongdi.jeju_nongdi.util.JwtUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -34,6 +38,18 @@ class AuthControllerTest {
 
     @MockBean
     private UserService userService;
+    
+    @MockBean
+    private JwtUtil jwtUtil;
+    
+    @MockBean
+    private CustomUserDetailsService customUserDetailsService;
+    
+    @MockBean
+    private AuthenticationManager authenticationManager;
+    
+    @MockBean
+    private PasswordEncoder passwordEncoder;
 
     @Test
     @DisplayName("회원가입 API 테스트")
@@ -43,7 +59,7 @@ class AuthControllerTest {
         SignupRequest request = new SignupRequest("integration@test.com", "password123", "Integration Test", "integrationuser", "01012345678" );
 
         AuthResponse response =
-                new AuthResponse("test.jwt.token", "test@example.com", "Test User", "testuser", User.Role.USER.name());
+                new AuthResponse("test.jwt.token", "integration@test.com", "Integration Test", "integrationuser", User.Role.USER.name());
 
         given(userService.signup(any(SignupRequest.class))).willReturn(response);
 
@@ -55,9 +71,9 @@ class AuthControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("test.jwt.token"))
-                .andExpect(jsonPath("$.email").value("test@example.com"))
-                .andExpect(jsonPath("$.name").value("Test User"))
-                .andExpect(jsonPath("$.nickname").value("testuser"))
+                .andExpect(jsonPath("$.email").value("integration@test.com"))
+                .andExpect(jsonPath("$.name").value("Integration Test"))
+                .andExpect(jsonPath("$.nickname").value("integrationuser"))
                 .andExpect(jsonPath("$.role").value("USER"));
     }
 
@@ -66,10 +82,10 @@ class AuthControllerTest {
     @WithMockUser
     void loginTest() throws Exception {
         // given
-        LoginRequest request = new LoginRequest("test@example.com", "password123");
+        LoginRequest request = new LoginRequest("integration@test.com", "password123");
 
         AuthResponse response =
-                new AuthResponse("test.jwt.token", "test@example.com", "Test User", "testuser", User.Role.USER.name());
+                new AuthResponse("test.jwt.token", "integration@test.com", "Integration Test", "integrationuser", User.Role.USER.name());
 
         given(userService.login(any(LoginRequest.class))).willReturn(response);
 
@@ -81,9 +97,9 @@ class AuthControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("test.jwt.token"))
-                .andExpect(jsonPath("$.email").value("test@example.com"))
-                .andExpect(jsonPath("$.name").value("Test User"))
-                .andExpect(jsonPath("$.nickname").value("testuser"))
+                .andExpect(jsonPath("$.email").value("integration@test.com"))
+                .andExpect(jsonPath("$.name").value("Integration Test"))
+                .andExpect(jsonPath("$.nickname").value("integrationuser"))
                 .andExpect(jsonPath("$.role").value("USER"));
     }
 
