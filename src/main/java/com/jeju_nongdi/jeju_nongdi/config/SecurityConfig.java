@@ -58,10 +58,12 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers("/api/auth/**") // CSRF 보호를 적용하지 않을 경로
                 .ignoringRequestMatchers("/h2-console/**")
+                .ignoringRequestMatchers("/swagger-ui/**", "/v3/api-docs/**")
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
                     .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
+                    .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                     .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
