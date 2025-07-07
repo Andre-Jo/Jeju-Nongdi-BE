@@ -1,4 +1,4 @@
-FROM openjdk:21-jdk-slim AS builder
+FROM amazoncorretto:21 AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ COPY src src
 
 RUN ./gradlew bootJar --no-daemon
 
-FROM openjdk:21-jre-slim
+FROM amazoncorretto:21
 
 WORKDIR /app
 
