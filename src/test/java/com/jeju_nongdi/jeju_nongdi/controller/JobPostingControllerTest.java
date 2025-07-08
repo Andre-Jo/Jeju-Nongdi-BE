@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -46,7 +46,7 @@ class JobPostingControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private JobPostingService jobPostingService;
 
     private JobPostingRequest testRequest;
@@ -120,7 +120,6 @@ class JobPostingControllerTest {
 
         // when & then
         mockMvc.perform(post("/api/job-postings")
-                        .with(user(testUser))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testRequest)))
@@ -137,6 +136,7 @@ class JobPostingControllerTest {
 
     @Test
     @DisplayName("일손 모집 공고 목록 조회 - 성공")
+    @WithMockUser(username = "test@example.com")
     void getJobPostings_Success() throws Exception {
         // given
         List<JobPostingResponse> jobPostings = List.of(testResponse);
@@ -159,6 +159,7 @@ class JobPostingControllerTest {
 
     @Test
     @DisplayName("일손 모집 공고 필터링 조회 - 성공")
+    @WithMockUser(username = "test@example.com")
     void getFilteredJobPostings_Success() throws Exception {
         // given
         List<JobPostingResponse> jobPostings = List.of(testResponse);
@@ -185,6 +186,7 @@ class JobPostingControllerTest {
 
     @Test
     @DisplayName("지도 마커용 데이터 조회 - 성공")
+    @WithMockUser(username = "test@example.com")
     void getJobPostingMarkers_Success() throws Exception {
         // given
         JobPostingMarkerResponse markerResponse = JobPostingMarkerResponse.builder()
@@ -216,6 +218,7 @@ class JobPostingControllerTest {
 
     @Test
     @DisplayName("일손 모집 공고 상세 조회 - 성공")
+    @WithMockUser(username = "test@example.com")
     void getJobPosting_Success() throws Exception {
         // given
         Long jobPostingId = 1L;
@@ -243,7 +246,6 @@ class JobPostingControllerTest {
 
         // when & then
         mockMvc.perform(put("/api/job-postings/{id}", jobPostingId)
-                        .with(user(testUser))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testRequest)))
@@ -260,11 +262,10 @@ class JobPostingControllerTest {
     void deleteJobPosting_Success() throws Exception {
         // given
         Long jobPostingId = 1L;
-        doNothing().when(jobPostingService).deleteJobPosting(jobPostingId, testUser.getEmail());
+        doNothing().when(jobPostingService).deleteJobPosting(jobPostingId, "test@example.com");
 
         // when & then
         mockMvc.perform(delete("/api/job-postings/{id}", jobPostingId)
-                        .with(user(testUser))
                         .with(csrf()))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -272,7 +273,7 @@ class JobPostingControllerTest {
                 .andExpect(jsonPath("$.message").value("공고가 성공적으로 삭제되었습니다."))
                 .andExpect(jsonPath("$.data").isEmpty());
 
-        verify(jobPostingService).deleteJobPosting(jobPostingId, testUser.getEmail());
+        verify(jobPostingService).deleteJobPosting(jobPostingId, "test@example.com");
     }
 
     @Test
@@ -282,19 +283,18 @@ class JobPostingControllerTest {
         // given
         Long jobPostingId = 1L;
         JobPosting.JobStatus newStatus = JobPosting.JobStatus.CLOSED;
-        given(jobPostingService.updateJobPostingStatus(jobPostingId, newStatus, testUser.getEmail()))
+        given(jobPostingService.updateJobPostingStatus(jobPostingId, newStatus, "test@example.com"))
                 .willReturn(testResponse);
 
         // when & then
         mockMvc.perform(patch("/api/job-postings/{id}/status", jobPostingId)
-                        .with(user(testUser))
                         .with(csrf())
                         .param("status", newStatus.toString()))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(jobPostingId));
 
-        verify(jobPostingService).updateJobPostingStatus(jobPostingId, newStatus, testUser.getEmail());
+        verify(jobPostingService).updateJobPostingStatus(jobPostingId, newStatus, "test@example.com");
     }
 
     @Test
@@ -303,22 +303,22 @@ class JobPostingControllerTest {
     void getMyJobPostings_Success() throws Exception {
         // given
         List<JobPostingResponse> myJobPostings = List.of(testResponse);
-        given(jobPostingService.getJobPostingsByUser(testUser.getEmail())).willReturn(myJobPostings);
+        given(jobPostingService.getJobPostingsByUser("test@example.com")).willReturn(myJobPostings);
 
         // when & then
-        mockMvc.perform(get("/api/job-postings/my")
-                        .with(user(testUser)))
+        mockMvc.perform(get("/api/job-postings/my"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].title").value(testResponse.getTitle()))
-                .andExpect(jsonPath("$[0].author.email").value(testUser.getEmail()));
+                .andExpect(jsonPath("$[0].author.email").value("test@example.com"));
 
-        verify(jobPostingService).getJobPostingsByUser(testUser.getEmail());
+        verify(jobPostingService).getJobPostingsByUser("test@example.com");
     }
 
     @Test
     @DisplayName("작물 타입 목록 조회 - 성공")
+    @WithMockUser(username = "test@example.com")
     void getCropTypes_Success() throws Exception {
         // when & then
         mockMvc.perform(get("/api/job-postings/crop-types"))
@@ -331,6 +331,7 @@ class JobPostingControllerTest {
 
     @Test
     @DisplayName("작업 타입 목록 조회 - 성공")
+    @WithMockUser(username = "test@example.com")
     void getWorkTypes_Success() throws Exception {
         // when & then
         mockMvc.perform(get("/api/job-postings/work-types"))
@@ -341,6 +342,7 @@ class JobPostingControllerTest {
 
     @Test
     @DisplayName("급여 타입 목록 조회 - 성공")
+    @WithMockUser(username = "test@example.com")
     void getWageTypes_Success() throws Exception {
         // when & then
         mockMvc.perform(get("/api/job-postings/wage-types"))
@@ -351,6 +353,7 @@ class JobPostingControllerTest {
 
     @Test
     @DisplayName("공고 상태 목록 조회 - 성공")
+    @WithMockUser(username = "test@example.com")
     void getJobStatuses_Success() throws Exception {
         // when & then
         mockMvc.perform(get("/api/job-postings/job-statuses"))

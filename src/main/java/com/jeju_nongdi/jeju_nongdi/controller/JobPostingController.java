@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,13 +33,13 @@ public class JobPostingController {
     @PostMapping
     public ResponseEntity<JobPostingResponse> createJobPosting(
             @Valid @RequestBody JobPostingRequest request,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         
-        if (user == null) {
+        if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
-        JobPostingResponse response = jobPostingService.createJobPosting(request, user.getEmail());
+        JobPostingResponse response = jobPostingService.createJobPosting(request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -92,13 +93,13 @@ public class JobPostingController {
     public ResponseEntity<JobPostingResponse> updateJobPosting(
             @PathVariable Long id,
             @Valid @RequestBody JobPostingRequest request,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         
-        if (user == null) {
+        if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
-        JobPostingResponse response = jobPostingService.updateJobPosting(id, request, user.getEmail());
+        JobPostingResponse response = jobPostingService.updateJobPosting(id, request, userDetails.getUsername());
         return ResponseEntity.ok(response);
     }
 
@@ -108,13 +109,13 @@ public class JobPostingController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteJobPosting(
             @PathVariable Long id,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         
-        if (user == null) {
+        if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
-        jobPostingService.deleteJobPosting(id, user.getEmail());
+        jobPostingService.deleteJobPosting(id, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("공고가 성공적으로 삭제되었습니다.", null));
     }
 
@@ -125,13 +126,13 @@ public class JobPostingController {
     public ResponseEntity<JobPostingResponse> updateJobPostingStatus(
             @PathVariable Long id,
             @RequestParam JobPosting.JobStatus status,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         
-        if (user == null) {
+        if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
-        JobPostingResponse response = jobPostingService.updateJobPostingStatus(id, status, user.getEmail());
+        JobPostingResponse response = jobPostingService.updateJobPostingStatus(id, status, userDetails.getUsername());
         return ResponseEntity.ok(response);
     }
 
@@ -140,13 +141,13 @@ public class JobPostingController {
      */
     @GetMapping("/my")
     public ResponseEntity<List<JobPostingResponse>> getMyJobPostings(
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         
-        if (user == null) {
+        if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
-        List<JobPostingResponse> jobPostings = jobPostingService.getJobPostingsByUser(user.getEmail());
+        List<JobPostingResponse> jobPostings = jobPostingService.getJobPostingsByUser(userDetails.getUsername());
         return ResponseEntity.ok(jobPostings);
     }
 
