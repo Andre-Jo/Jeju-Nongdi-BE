@@ -34,11 +34,11 @@ public class JobPosting {
     @Column(nullable = false)
     private String address;
 
-    @Column(nullable = false)
-    private BigDecimal latitude;
+    @Column(name = "latitude")
+    private Double latitude;
 
-    @Column(nullable = false)
-    private BigDecimal longitude;
+    @Column(name = "longitude")
+    private Double longitude;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "crop_type", nullable = false)

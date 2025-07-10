@@ -7,10 +7,13 @@ import com.jeju_nongdi.jeju_nongdi.dto.JobPostingResponse;
 import com.jeju_nongdi.jeju_nongdi.entity.JobPosting;
 import com.jeju_nongdi.jeju_nongdi.entity.User;
 import com.jeju_nongdi.jeju_nongdi.service.JobPostingService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,7 +51,7 @@ public class JobPostingController {
      */
     @GetMapping
     public ResponseEntity<Page<JobPostingResponse>> getJobPostings(
-            @PageableDefault(size = 20) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<JobPostingResponse> jobPostings = jobPostingService.getActiveJobPostings(pageable);
         return ResponseEntity.ok(jobPostings);
@@ -182,4 +185,39 @@ public class JobPostingController {
     public ResponseEntity<JobPosting.JobStatus[]> getJobStatuses() {
         return ResponseEntity.ok(JobPosting.JobStatus.values());
     }
+
+    @Operation(summary = "지도 영역 내 일손 모집 공고 조회",
+            description = "지정된 위도/경도 범위 내의 일손 모집 공고를 조회합니다.\n\n" +
+                    "**예시 좌표:**\n" +
+                    "- 전체 제주도: minLat=33.25, maxLat=33.50, minLng=126.26, maxLng=126.72\n" +
+                    "- 제주시 북부: minLat=33.39, maxLat=33.49, minLng=126.26, maxLng=126.53\n" +
+                    "- 서귀포시 남부: minLat=33.25, maxLat=33.33, minLng=126.40, maxLng=126.72")
+    @GetMapping("/bounds")
+    public ResponseEntity<List<JobPostingResponse>> getJobPostingsByBounds(
+            @Parameter(description = "최소 위도 (제주도 전체 조회시: 33.25)",
+                    example = "33.25", required = true)
+            @RequestParam double minLat,
+
+            @Parameter(description = "최대 위도 (제주도 전체 조회시: 33.50)",
+                    example = "33.50", required = true)
+            @RequestParam double maxLat,
+
+            @Parameter(description = "최소 경도 (제주도 전체 조회시: 126.26)",
+                    example = "126.26", required = true)
+            @RequestParam double minLng,
+
+            @Parameter(description = "최대 경도 (제주도 전체 조회시: 126.72)",
+                    example = "126.72", required = true)
+            @RequestParam double maxLng,
+
+            @Parameter(description = "페이징 정보 (기본: 20개씩, 생성일 내림차순)")
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        List<JobPostingResponse> jobPostings = jobPostingService.getJobPostingsByBounds(
+                minLat, maxLat, minLng, maxLng, pageable);
+
+        return ResponseEntity.ok(jobPostings);
+    }
+
 }
