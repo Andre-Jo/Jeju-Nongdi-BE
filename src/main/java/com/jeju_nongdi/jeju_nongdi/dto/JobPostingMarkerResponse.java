@@ -19,8 +19,8 @@ public class JobPostingMarkerResponse {
     private String title;
     private String farmName;
     private String address;
-    private BigDecimal latitude;
-    private BigDecimal longitude;
+    private double latitude;
+    private double longitude;
     private JobPosting.CropType cropType;
     private String cropTypeName;
     private JobPosting.WorkType workType;

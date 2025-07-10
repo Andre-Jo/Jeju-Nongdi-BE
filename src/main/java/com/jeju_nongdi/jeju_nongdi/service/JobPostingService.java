@@ -198,4 +198,14 @@ public class JobPostingService {
         jobPosting.setContactPhone(request.getContactPhone());
         jobPosting.setContactEmail(request.getContactEmail());
     }
+    public List<JobPostingResponse> getJobPostingsByBounds(
+            double minLat, double maxLat, double minLng, double maxLng, Pageable pageable) {
+
+        List<JobPosting> jobPostings = jobPostingRepository.findByBounds(
+                minLat, maxLat, minLng, maxLng, pageable);
+
+        return jobPostings.stream()
+                .map(JobPostingResponse::from)
+                .collect(Collectors.toList());
+    }
 }

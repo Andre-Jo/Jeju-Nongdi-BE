@@ -99,4 +99,13 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
             Integer maxWages, 
             JobPosting.JobStatus status
     );
+    @Query("SELECT j FROM JobPosting j WHERE j.latitude BETWEEN :minLat AND :maxLat " +
+            "AND j.longitude BETWEEN :minLng AND :maxLng " +
+            "AND j.status = 'ACTIVE'")
+    List<JobPosting> findByBounds(@Param("minLat") double minLatitude,
+                                  @Param("maxLat") double maxLatitude,
+                                  @Param("minLng") double minLongitude,
+                                  @Param("maxLng") double maxLongitude,
+                                  Pageable pageable);
+
 }
