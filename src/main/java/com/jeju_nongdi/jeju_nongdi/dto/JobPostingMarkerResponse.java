@@ -19,8 +19,8 @@ public class JobPostingMarkerResponse {
     private String title;
     private String farmName;
     private String address;
-    private BigDecimal latitude;
-    private BigDecimal longitude;
+    private double latitude;
+    private double longitude;
     private JobPosting.CropType cropType;
     private String cropTypeName;
     private JobPosting.WorkType workType;
@@ -31,6 +31,8 @@ public class JobPostingMarkerResponse {
     private LocalDate workStartDate;
     private LocalDate workEndDate;
     private Integer recruitmentCount;
+    private JobPosting.JobStatus status;
+    private String statusName;
 
     // 엔티티에서 마커 DTO로 변환하는 정적 메서드
     public static JobPostingMarkerResponse from(JobPosting jobPosting) {
@@ -51,6 +53,8 @@ public class JobPostingMarkerResponse {
                 .workStartDate(jobPosting.getWorkStartDate())
                 .workEndDate(jobPosting.getWorkEndDate())
                 .recruitmentCount(jobPosting.getRecruitmentCount())
+                .status(jobPosting.getStatus())
+                .statusName(jobPosting.getStatus().getKoreanName())
                 .build();
     }
 }

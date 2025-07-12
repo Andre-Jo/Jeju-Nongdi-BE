@@ -34,22 +34,22 @@ public class JobPosting {
     @Column(nullable = false)
     private String address;
 
-    @Column(name = "latitude", precision = 10, scale = 8)
-    private BigDecimal latitude; // 위도
+    @Column(name = "latitude")
+    private Double latitude;
 
-    @Column(name = "longitude", precision = 11, scale = 8)
-    private BigDecimal longitude; // 경도
+    @Column(name = "longitude")
+    private Double longitude;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "crop_type", nullable = false)
-    private CropType cropType; // 수확 작물
+    private CropType cropType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "work_type", nullable = false)
-    private WorkType workType; // 근무 내용
+    private WorkType workType;
 
     @Column(nullable = false)
-    private Integer wages; // 임금
+    private Integer wages;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "wage_type", nullable = false)

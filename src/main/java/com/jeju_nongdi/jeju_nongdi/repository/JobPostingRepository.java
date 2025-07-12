@@ -90,26 +90,6 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
             Pageable pageable
     );
 
-    // 날짜 범위와 함께 복합 필터링 조회
-    @Query("""
-        SELECT jp FROM JobPosting jp 
-        WHERE jp.status = :status 
-        AND (:cropType IS NULL OR jp.cropType = :cropType)
-        AND (:workType IS NULL OR jp.workType = :workType)
-        AND (:address IS NULL OR jp.address LIKE %:address%)
-        AND jp.workStartDate <= :endDate 
-        AND jp.workEndDate >= :startDate
-        ORDER BY jp.createdAt DESC
-        """)
-    List<JobPosting> findWithFiltersAndDateRange(
-            @Param("status") JobPosting.JobStatus status,
-            @Param("cropType") JobPosting.CropType cropType,
-            @Param("workType") JobPosting.WorkType workType,
-            @Param("address") String address,
-            @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate
-    );
-
     // 작성자 ID로 조회
     List<JobPosting> findByAuthor_IdOrderByCreatedAtDesc(Long authorId);
 
@@ -119,4 +99,13 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
             Integer maxWages, 
             JobPosting.JobStatus status
     );
+    @Query("SELECT j FROM JobPosting j WHERE j.latitude BETWEEN :minLat AND :maxLat " +
+            "AND j.longitude BETWEEN :minLng AND :maxLng " +
+            "AND j.status = 'ACTIVE'")
+    List<JobPosting> findByBounds(@Param("minLat") double minLatitude,
+                                  @Param("maxLat") double maxLatitude,
+                                  @Param("minLng") double minLongitude,
+                                  @Param("maxLng") double maxLongitude,
+                                  Pageable pageable);
+
 }
