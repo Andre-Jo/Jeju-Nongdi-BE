@@ -32,14 +32,14 @@ public class JobPostingRequest {
     private String address;
 
     @NotNull(message = "위도는 필수입니다")
-    @DecimalMin(value = "33.0", message = "올바른 위도를 입력해주세요")
-    @DecimalMax(value = "34.0", message = "올바른 위도를 입력해주세요")
-    private double latitude;
+    @DecimalMin(value = "33.0", message = "올바른 위도를 입력해주세요 (제주도 범위: 33.0~34.0)")
+    @DecimalMax(value = "34.0", message = "올바른 위도를 입력해주세요 (제주도 범위: 33.0~34.0)")
+    private BigDecimal latitude;
 
     @NotNull(message = "경도는 필수입니다")
-    @DecimalMin(value = "126.0", message = "올바른 경도를 입력해주세요")
-    @DecimalMax(value = "127.0", message = "올바른 경도를 입력해주세요")
-    private double longitude;
+    @DecimalMin(value = "126.0", message = "올바른 경도를 입력해주세요 (제주도 범위: 126.0~127.0)")
+    @DecimalMax(value = "127.0", message = "올바른 경도를 입력해주세요 (제주도 범위: 126.0~127.0)")
+    private BigDecimal longitude;
 
     @NotNull(message = "작물 종류는 필수입니다")
     private JobPosting.CropType cropType;

@@ -1,0 +1,275 @@
+package com.jeju_nongdi.jeju_nongdi.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jeju_nongdi.jeju_nongdi.dto.IdleFarmlandMarkerResponse;
+import com.jeju_nongdi.jeju_nongdi.dto.IdleFarmlandRequest;
+import com.jeju_nongdi.jeju_nongdi.dto.IdleFarmlandResponse;
+import com.jeju_nongdi.jeju_nongdi.entity.IdleFarmland;
+import com.jeju_nongdi.jeju_nongdi.service.CustomUserDetailsService;
+import com.jeju_nongdi.jeju_nongdi.service.IdleFarmlandService;
+import com.jeju_nongdi.jeju_nongdi.util.JwtUtil;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(IdleFarmlandController.class)
+class IdleFarmlandControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
+    private IdleFarmlandService idleFarmlandService;
+
+    @MockBean
+    private JwtUtil jwtUtil;
+
+    @MockBean
+    private CustomUserDetailsService customUserDetailsService;
+
+    @MockBean
+    private AuthenticationManager authenticationManager;
+
+    @MockBean
+    private PasswordEncoder passwordEncoder;
+
+    @Test
+    @DisplayName("유휴 농지 등록 API 테스트")
+    @WithMockUser
+    void createIdleFarmlandTest() throws Exception {
+        // given
+        IdleFarmlandRequest request = IdleFarmlandRequest.builder()
+                .title("제주시 애월읍 농지")
+                .description("제주시 애월읍에 위치한 유휴 농지입니다.")
+                .farmlandName("애월읍 농지")
+                .address("제주시 애월읍 고성리")
+                .latitude(BigDecimal.valueOf(33.459722))
+                .longitude(BigDecimal.valueOf(126.331389))
+                .areaSize(BigDecimal.valueOf(1000.50))
+                .usageType(IdleFarmland.UsageType.CULTIVATION)
+                .soilType(IdleFarmland.SoilType.VOLCANIC_ASH)
+                .monthlyRent(500000)
+                .contactEmail("owner@example.com")
+                .contactPhone("010-1234-5678")
+                .build();
+
+        IdleFarmlandResponse response = IdleFarmlandResponse.builder()
+                .id(1L)
+                .title("제주시 애월읍 농지")
+                .description("제주시 애월읍에 위치한 유휴 농지입니다.")
+                .address("제주시 애월읍 고성리")
+                .latitude(BigDecimal.valueOf(33.459722))
+                .longitude(BigDecimal.valueOf(126.331389))
+                .areaSize(BigDecimal.valueOf(1000.50))
+                .usageType(IdleFarmland.UsageType.CULTIVATION)
+                .soilType(IdleFarmland.SoilType.VOLCANIC_ASH)
+                .monthlyRent(500000)
+                .contactEmail("owner@example.com")
+                .contactPhone("010-1234-5678")
+                .status(IdleFarmland.FarmlandStatus.AVAILABLE)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        given(idleFarmlandService.createIdleFarmland(any(IdleFarmlandRequest.class), any()))
+                .willReturn(response);
+
+        // when & then
+        mockMvc.perform(post("/api/idle-farmlands")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.title").value("제주시 애월읍 농지"))
+                .andExpect(jsonPath("$.usageType").value("CULTIVATION"))
+                .andExpect(jsonPath("$.soilType").value("VOLCANIC_ASH"));
+    }
+
+    @Test
+    @DisplayName("유휴 농지 목록 조회 API 테스트")
+    @WithMockUser
+    void getIdleFarmlandsTest() throws Exception {
+        // given
+        IdleFarmlandResponse response = IdleFarmlandResponse.builder()
+                .id(1L)
+                .title("제주시 애월읍 농지")
+                .description("제주시 애월읍에 위치한 유휴 농지입니다.")
+                .address("제주시 애월읍 고성리")
+                .latitude(BigDecimal.valueOf(33.459722))
+                .longitude(BigDecimal.valueOf(126.331389))
+                .areaSize(BigDecimal.valueOf(1000.50))
+                .usageType(IdleFarmland.UsageType.CULTIVATION)
+                .soilType(IdleFarmland.SoilType.VOLCANIC_ASH)
+                .monthlyRent(500000)
+                .contactEmail("owner@example.com")
+                .contactPhone("010-1234-5678")
+                .status(IdleFarmland.FarmlandStatus.AVAILABLE)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        Page<IdleFarmlandResponse> page = new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1);
+
+        given(idleFarmlandService.getIdleFarmlands(any())).willReturn(page);
+
+        // when & then
+        mockMvc.perform(get("/api/idle-farmlands")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].title").value("제주시 애월읍 농지"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    @DisplayName("유휴 농지 상세 조회 API 테스트")
+    @WithMockUser
+    void getIdleFarmlandTest() throws Exception {
+        // given
+        Long farmlandId = 1L;
+        IdleFarmlandResponse response = IdleFarmlandResponse.builder()
+                .id(farmlandId)
+                .title("제주시 애월읍 농지")
+                .description("제주시 애월읍에 위치한 유휴 농지입니다.")
+                .address("제주시 애월읍 고성리")
+                .latitude(BigDecimal.valueOf(33.459722))
+                .longitude(BigDecimal.valueOf(126.331389))
+                .areaSize(BigDecimal.valueOf(1000.50))
+                .usageType(IdleFarmland.UsageType.CULTIVATION)
+                .soilType(IdleFarmland.SoilType.VOLCANIC_ASH)
+                .monthlyRent(500000)
+                .contactEmail("owner@example.com")
+                .contactPhone("010-1234-5678")
+                .status(IdleFarmland.FarmlandStatus.AVAILABLE)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        given(idleFarmlandService.getIdleFarmland(farmlandId)).willReturn(response);
+
+        // when & then
+        mockMvc.perform(get("/api/idle-farmlands/{id}", farmlandId))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(farmlandId))
+                .andExpect(jsonPath("$.title").value("제주시 애월읍 농지"));
+    }
+
+    @Test
+    @DisplayName("유휴 농지 삭제 API 테스트")
+    @WithMockUser
+    void deleteIdleFarmlandTest() throws Exception {
+        // given
+        Long farmlandId = 1L;
+        doNothing().when(idleFarmlandService).deleteIdleFarmland(eq(farmlandId), any());
+
+        // when & then
+        mockMvc.perform(delete("/api/idle-farmlands/{id}", farmlandId)
+                        .with(csrf()))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("농지가 성공적으로 삭제되었습니다."));
+    }
+
+    @Test
+    @DisplayName("내 농지 목록 조회 API 테스트")
+    @WithMockUser
+    void getMyIdleFarmlandsTest() throws Exception {
+        // given
+        IdleFarmlandResponse response = IdleFarmlandResponse.builder()
+                .id(1L)
+                .title("제주시 애월읍 농지")
+                .description("제주시 애월읍에 위치한 유휴 농지입니다.")
+                .address("제주시 애월읍 고성리")
+                .latitude(BigDecimal.valueOf(33.459722))
+                .longitude(BigDecimal.valueOf(126.331389))
+                .areaSize(BigDecimal.valueOf(1000.50))
+                .usageType(IdleFarmland.UsageType.CULTIVATION)
+                .soilType(IdleFarmland.SoilType.VOLCANIC_ASH)
+                .monthlyRent(500000)
+                .contactEmail("owner@example.com")
+                .contactPhone("010-1234-5678")
+                .status(IdleFarmland.FarmlandStatus.AVAILABLE)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        given(idleFarmlandService.getMyIdleFarmlands(any())).willReturn(List.of(response));
+
+        // when & then
+        mockMvc.perform(get("/api/idle-farmlands/my"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].title").value("제주시 애월읍 농지"));
+    }
+
+    @Test
+    @DisplayName("지도 마커용 데이터 조회 API 테스트")
+    @WithMockUser
+    void getIdleFarmlandMarkersTest() throws Exception {
+        // given
+        IdleFarmlandMarkerResponse marker = IdleFarmlandMarkerResponse.builder()
+                .id(1L)
+                .title("제주시 애월읍 농지")
+                .address("제주시 애월읍 고성리")
+                .latitude(BigDecimal.valueOf(33.459722))
+                .longitude(BigDecimal.valueOf(126.331389))
+                .areaSize(BigDecimal.valueOf(1000.50))
+                .monthlyRent(500000)
+                .status(IdleFarmland.FarmlandStatus.AVAILABLE)
+                .build();
+
+        given(idleFarmlandService.getIdleFarmlandMarkers()).willReturn(List.of(marker));
+
+        // when & then
+        mockMvc.perform(get("/api/idle-farmlands/markers"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].title").value("제주시 애월읍 농지"))
+                .andExpect(jsonPath("$[0].latitude").value(33.459722));
+    }
+
+    @Test
+    @DisplayName("이용 유형 목록 조회 API 테스트")
+    @WithMockUser
+    void getUsageTypesTest() throws Exception {
+        // when & then
+        mockMvc.perform(get("/api/idle-farmlands/usage-types"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+}

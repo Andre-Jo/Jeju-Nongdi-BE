@@ -36,11 +36,11 @@ public class JwtUtil {
         Date expiryDate = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
-                .subject(email)
-                .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(key)
-                .compact();
+                .subject(email) // 토큰 주체 (유저 이메일)
+                .issuedAt(now) // 발급 시간
+                .expiration(expiryDate) // 만료 시간
+                .signWith(key) // HMAC SHA로 서명
+                .compact(); // JWT 문자열로 변환
     }
 
     public String getEmailFromToken(String token) {
