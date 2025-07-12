@@ -94,6 +94,122 @@ public class JobPostingService {
     }
 
     /**
+     * 확장된 필터링 일손 모집 공고 목록 조회 (지역별, 시즌별 포함)
+     */
+    @Transactional(readOnly = true)
+    public List<JobPostingResponse> getJobPostingsWithAdvancedFilters(
+            JobPosting.CropType cropType,
+            JobPosting.WorkType workType,
+            String region,        // 제주시, 서귀포시
+            String district,      // 애월읍, 한림읍 등
+            Integer month,        // 월별 검색 (1-12)
+            String season) {      // 계절별 검색 (spring, summer, autumn, winter)
+        
+        // 주소 필터 조합
+        String addressFilter = buildAddressFilter(region, district);
+        
+        // 시즌/월별 필터링을 위한 날짜 범위 설정
+        LocalDate startDate = getSeasonStartDate(month, season);
+        LocalDate endDate = getSeasonEndDate(month, season);
+        
+        List<JobPosting> jobPostings;
+        
+        if (startDate != null && endDate != null) {
+            // 시즌/월별 필터링이 있는 경우
+            jobPostings = jobPostingRepository.findWithFiltersAndDateRange(
+                    JobPosting.JobStatus.ACTIVE,
+                    cropType,
+                    workType,
+                    addressFilter,
+                    startDate,
+                    endDate
+            );
+        } else {
+            // 기본 필터링
+            jobPostings = jobPostingRepository.findWithFilters(
+                    JobPosting.JobStatus.ACTIVE,
+                    cropType,
+                    workType,
+                    addressFilter,
+                    LocalDate.now()
+            );
+        }
+        
+        return jobPostings.stream()
+                .map(JobPostingResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 지역별 필터링된 지도 마커용 데이터 조회
+     */
+    @Transactional(readOnly = true)
+    public List<JobPostingMarkerResponse> getJobPostingMarkersByRegion(String region, String district) {
+        String addressFilter = buildAddressFilter(region, district);
+        
+        List<JobPosting> jobPostings;
+        if (addressFilter != null) {
+            jobPostings = jobPostingRepository.findByAddressContainingAndStatusOrderByCreatedAtDesc(
+                    addressFilter, JobPosting.JobStatus.ACTIVE);
+        } else {
+            jobPostings = jobPostingRepository.findAllForMap(JobPosting.JobStatus.ACTIVE);
+        }
+        
+        return jobPostings.stream()
+                .map(JobPostingMarkerResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    // === Private Helper Methods for Advanced Filtering ===
+
+    private String buildAddressFilter(String region, String district) {
+        if (district != null && !district.trim().isEmpty()) {
+            return district.trim();
+        } else if (region != null && !region.trim().isEmpty()) {
+            return region.trim();
+        }
+        return null;
+    }
+
+    private LocalDate getSeasonStartDate(Integer month, String season) {
+        if (month != null && month >= 1 && month <= 12) {
+            return LocalDate.of(LocalDate.now().getYear(), month, 1);
+        }
+        
+        if (season != null) {
+            int currentYear = LocalDate.now().getYear();
+            return switch (season.toLowerCase()) {
+                case "spring" -> LocalDate.of(currentYear, 3, 1);
+                case "summer" -> LocalDate.of(currentYear, 6, 1);
+                case "autumn", "fall" -> LocalDate.of(currentYear, 9, 1);
+                case "winter" -> LocalDate.of(currentYear, 12, 1);
+                default -> null;
+            };
+        }
+        
+        return null;
+    }
+
+    private LocalDate getSeasonEndDate(Integer month, String season) {
+        if (month != null && month >= 1 && month <= 12) {
+            return LocalDate.of(LocalDate.now().getYear(), month, 1).plusMonths(1).minusDays(1);
+        }
+        
+        if (season != null) {
+            int currentYear = LocalDate.now().getYear();
+            return switch (season.toLowerCase()) {
+                case "spring" -> LocalDate.of(currentYear, 5, 31);
+                case "summer" -> LocalDate.of(currentYear, 8, 31);
+                case "autumn", "fall" -> LocalDate.of(currentYear, 11, 30);
+                case "winter" -> LocalDate.of(currentYear + 1, 2, 28); // 다음해 2월까지
+                default -> null;
+            };
+        }
+        
+        return null;
+    }
+
+    /**
      * 지도 마커용 데이터 조회
      */
     @Transactional(readOnly = true)
@@ -195,15 +311,5 @@ public class JobPostingService {
         jobPosting.setRecruitmentCount(request.getRecruitmentCount());
         jobPosting.setContactPhone(request.getContactPhone());
         jobPosting.setContactEmail(request.getContactEmail());
-    }
-    public List<JobPostingResponse> getJobPostingsByBounds(
-            double minLat, double maxLat, double minLng, double maxLng, Pageable pageable) {
-
-        List<JobPosting> jobPostings = jobPostingRepository.findByBounds(
-                minLat, maxLat, minLng, maxLng, pageable);
-
-        return jobPostings.stream()
-                .map(JobPostingResponse::from)
-                .collect(Collectors.toList());
     }
 }
