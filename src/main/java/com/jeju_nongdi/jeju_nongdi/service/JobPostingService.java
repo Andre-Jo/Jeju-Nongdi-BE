@@ -25,9 +25,7 @@ public class JobPostingService {
     private final JobPostingRepository jobPostingRepository;
     private final UserRepository userRepository;
 
-    /**
-     * 일손 모집 공고 생성
-     */
+    // 일손 모집 공고 생성
     public JobPostingResponse createJobPosting(JobPostingRequest request, String userEmail) {
         User author = getUserByEmail(userEmail);
 
