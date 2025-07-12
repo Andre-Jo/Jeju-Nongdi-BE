@@ -352,6 +352,169 @@ class JobPostingControllerTest {
     }
 
     @Test
+    @DisplayName("확장된 일손 모집 공고 검색 - 성공")
+    @WithMockUser(username = "test@example.com")
+    void searchJobPostings_Success() throws Exception {
+        // given
+        List<JobPostingResponse> jobPostings = List.of(testResponse);
+        given(jobPostingService.getJobPostingsWithAdvancedFilters(any(), any(), any(), any(), any(), any()))
+                .willReturn(jobPostings);
+
+        // when & then
+        mockMvc.perform(get("/api/job-postings/search")
+                        .param("cropType", "POTATO")
+                        .param("workType", "HARVESTING")
+                        .param("region", "제주시")
+                        .param("district", "한림읍")
+                        .param("month", "3")
+                        .param("season", "spring"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].title").value(testResponse.getTitle()))
+                .andExpect(jsonPath("$[0].cropType").value("POTATO"))
+                .andExpect(jsonPath("$[0].workType").value("HARVESTING"));
+
+        verify(jobPostingService).getJobPostingsWithAdvancedFilters(
+                JobPosting.CropType.POTATO,
+                JobPosting.WorkType.HARVESTING,
+                "제주시",
+                "한림읍",
+                3,
+                "spring"
+        );
+    }
+
+    @Test
+    @DisplayName("확장된 일손 모집 공고 검색 - 시즌별 검색")
+    @WithMockUser(username = "test@example.com")
+    void searchJobPostings_BySeason_Success() throws Exception {
+        // given
+        List<JobPostingResponse> jobPostings = List.of(testResponse);
+        given(jobPostingService.getJobPostingsWithAdvancedFilters(any(), any(), any(), any(), any(), any()))
+                .willReturn(jobPostings);
+
+        // when & then
+        mockMvc.perform(get("/api/job-postings/search")
+                        .param("season", "summer"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].title").value(testResponse.getTitle()));
+
+        verify(jobPostingService).getJobPostingsWithAdvancedFilters(
+                null,
+                null,
+                null,
+                null,
+                null,
+                "summer"
+        );
+    }
+
+    @Test
+    @DisplayName("확장된 일손 모집 공고 검색 - 월별 검색")
+    @WithMockUser(username = "test@example.com")
+    void searchJobPostings_ByMonth_Success() throws Exception {
+        // given
+        List<JobPostingResponse> jobPostings = List.of(testResponse);
+        given(jobPostingService.getJobPostingsWithAdvancedFilters(any(), any(), any(), any(), any(), any()))
+                .willReturn(jobPostings);
+
+        // when & then
+        mockMvc.perform(get("/api/job-postings/search")
+                        .param("month", "11"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].title").value(testResponse.getTitle()));
+
+        verify(jobPostingService).getJobPostingsWithAdvancedFilters(
+                null,
+                null,
+                null,
+                null,
+                11,
+                null
+        );
+    }
+
+    @Test
+    @DisplayName("지역별 지도 마커용 데이터 조회 - 성공")
+    @WithMockUser(username = "test@example.com")
+    void getJobPostingMarkersByRegion_Success() throws Exception {
+        // given
+        JobPostingMarkerResponse markerResponse = JobPostingMarkerResponse.builder()
+                .id(1L)
+                .title("감자 수확 일손 구합니다")
+                .farmName("제주 감자농장")
+                .address("제주시 한림읍")
+                .latitude(new BigDecimal("33.123456"))
+                .longitude(new BigDecimal("126.123456"))
+                .cropType(JobPosting.CropType.POTATO)
+                .cropTypeName("감자")
+                .workType(JobPosting.WorkType.HARVESTING)
+                .workTypeName("수확")
+                .wages(100000)
+                .wageType(JobPosting.WageType.DAILY)
+                .wageTypeName("일급")
+                .workStartDate(LocalDate.now().plusDays(1))
+                .workEndDate(LocalDate.now().plusDays(5))
+                .recruitmentCount(5)
+                .build();
+
+        given(jobPostingService.getJobPostingMarkersByRegion(any(), any())).willReturn(List.of(markerResponse));
+
+        // when & then
+        mockMvc.perform(get("/api/job-postings/markers/region")
+                        .param("region", "제주시")
+                        .param("district", "한림읍"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].title").value("감자 수확 일손 구합니다"))
+                .andExpect(jsonPath("$[0].address").value("제주시 한림읍"))
+                .andExpect(jsonPath("$[0].latitude").value(33.123456))
+                .andExpect(jsonPath("$[0].longitude").value(126.123456))
+                .andExpect(jsonPath("$[0].cropTypeName").value("감자"))
+                .andExpect(jsonPath("$[0].workTypeName").value("수확"));
+
+        verify(jobPostingService).getJobPostingMarkersByRegion("제주시", "한림읍");
+    }
+
+    @Test
+    @DisplayName("지역별 지도 마커용 데이터 조회 - 지역만 지정")
+    @WithMockUser(username = "test@example.com")
+    void getJobPostingMarkersByRegion_OnlyRegion_Success() throws Exception {
+        // given
+        JobPostingMarkerResponse markerResponse = JobPostingMarkerResponse.builder()
+                .id(1L)
+                .title("감자 수확 일손 구합니다")
+                .farmName("제주 감자농장")
+                .address("제주시 한림읍")
+                .latitude(new BigDecimal("33.123456"))
+                .longitude(new BigDecimal("126.123456"))
+                .cropType(JobPosting.CropType.POTATO)
+                .workType(JobPosting.WorkType.HARVESTING)
+                .wages(100000)
+                .build();
+
+        given(jobPostingService.getJobPostingMarkersByRegion(any(), any())).willReturn(List.of(markerResponse));
+
+        // when & then
+        mockMvc.perform(get("/api/job-postings/markers/region")
+                        .param("region", "제주시"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].address").value("제주시 한림읍"));
+
+        verify(jobPostingService).getJobPostingMarkersByRegion("제주시", null);
+    }
+
+    @Test
     @DisplayName("공고 상태 목록 조회 - 성공")
     @WithMockUser(username = "test@example.com")
     void getJobStatuses_Success() throws Exception {
