@@ -1,9 +1,12 @@
 package com.jeju_nongdi.jeju_nongdi.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -15,12 +18,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketChannelInterceptor webSocketChannelInterceptor;
 
+    @Bean
+    public TaskScheduler webSocketTaskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("websocket-");
+        scheduler.initialize();
+        return scheduler;
+    }
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // 메시지 브로커 설정
         config.enableSimpleBroker("/topic", "/queue") // 구독 경로
                 .setHeartbeatValue(new long[]{10000, 20000}) // 하트비트 설정 (클라이언트, 서버)
-                .setTaskScheduler(null); // 기본 스케줄러 사용
+                .setTaskScheduler(webSocketTaskScheduler()); // TaskScheduler 제공
         
         config.setApplicationDestinationPrefixes("/app"); // 클라이언트에서 메시지 발송 시 경로
         config.setUserDestinationPrefix("/user"); // 개별 사용자에게 메시지 전송 시 경로
