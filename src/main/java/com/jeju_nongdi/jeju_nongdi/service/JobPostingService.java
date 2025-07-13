@@ -312,4 +312,57 @@ public class JobPostingService {
         jobPosting.setContactPhone(request.getContactPhone());
         jobPosting.setContactEmail(request.getContactEmail());
     }
+
+    /**
+     * 지도 영역(bounds) 내 일손 모집 공고 조회
+     */
+    @Transactional(readOnly = true)
+    public List<JobPostingResponse> getJobPostingsByBounds(
+            double minLat, double maxLat, double minLng, double maxLng, Pageable pageable) {
+        
+        List<JobPosting> jobPostings = jobPostingRepository.findByBounds(
+                JobPosting.JobStatus.ACTIVE,
+                minLat, maxLat, minLng, maxLng
+        );
+        
+        return jobPostings.stream()
+                .map(JobPostingResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 지도 영역(bounds) 내 일손 모집 공고 조회 (필터링 포함)
+     */
+    @Transactional(readOnly = true)
+    public List<JobPostingResponse> getJobPostingsByBoundsWithFilters(
+            double minLat, double maxLat, double minLng, double maxLng,
+            JobPosting.CropType cropType, JobPosting.WorkType workType, String address) {
+        
+        List<JobPosting> jobPostings = jobPostingRepository.findByBoundsWithFilters(
+                JobPosting.JobStatus.ACTIVE,
+                minLat, maxLat, minLng, maxLng,
+                cropType, workType, address
+        );
+        
+        return jobPostings.stream()
+                .map(JobPostingResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 지도 영역(bounds) 내 마커용 데이터 조회
+     */
+    @Transactional(readOnly = true)
+    public List<JobPostingMarkerResponse> getJobPostingMarkersByBounds(
+            double minLat, double maxLat, double minLng, double maxLng) {
+        
+        List<JobPosting> jobPostings = jobPostingRepository.findByBounds(
+                JobPosting.JobStatus.ACTIVE,
+                minLat, maxLat, minLng, maxLng
+        );
+        
+        return jobPostings.stream()
+                .map(JobPostingMarkerResponse::from)
+                .collect(Collectors.toList());
+    }
 }

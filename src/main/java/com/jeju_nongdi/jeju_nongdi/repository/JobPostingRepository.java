@@ -119,4 +119,59 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
             Integer maxWages, 
             JobPosting.JobStatus status
     );
+
+    // 지도 영역(bounds) 내 공고 조회
+    @Query("""
+        SELECT jp FROM JobPosting jp 
+        WHERE jp.status = :status 
+        AND jp.latitude BETWEEN :minLat AND :maxLat
+        AND jp.longitude BETWEEN :minLng AND :maxLng
+        ORDER BY jp.createdAt DESC
+        """)
+    List<JobPosting> findByBounds(
+            @Param("status") JobPosting.JobStatus status,
+            @Param("minLat") double minLat,
+            @Param("maxLat") double maxLat,
+            @Param("minLng") double minLng,
+            @Param("maxLng") double maxLng
+    );
+
+    // 지도 영역(bounds) 내 공고 조회 (페이징)
+    @Query("""
+        SELECT jp FROM JobPosting jp 
+        WHERE jp.status = :status 
+        AND jp.latitude BETWEEN :minLat AND :maxLat
+        AND jp.longitude BETWEEN :minLng AND :maxLng
+        ORDER BY jp.createdAt DESC
+        """)
+    Page<JobPosting> findByBounds(
+            @Param("status") JobPosting.JobStatus status,
+            @Param("minLat") double minLat,
+            @Param("maxLat") double maxLat,
+            @Param("minLng") double minLng,
+            @Param("maxLng") double maxLng,
+            Pageable pageable
+    );
+
+    // 지도 영역(bounds) 내 공고 조회 (필터링 포함)
+    @Query("""
+        SELECT jp FROM JobPosting jp 
+        WHERE jp.status = :status 
+        AND jp.latitude BETWEEN :minLat AND :maxLat
+        AND jp.longitude BETWEEN :minLng AND :maxLng
+        AND (:cropType IS NULL OR jp.cropType = :cropType)
+        AND (:workType IS NULL OR jp.workType = :workType)
+        AND (:address IS NULL OR jp.address LIKE %:address%)
+        ORDER BY jp.createdAt DESC
+        """)
+    List<JobPosting> findByBoundsWithFilters(
+            @Param("status") JobPosting.JobStatus status,
+            @Param("minLat") double minLat,
+            @Param("maxLat") double maxLat,
+            @Param("minLng") double minLng,
+            @Param("maxLng") double maxLng,
+            @Param("cropType") JobPosting.CropType cropType,
+            @Param("workType") JobPosting.WorkType workType,
+            @Param("address") String address
+    );
 }

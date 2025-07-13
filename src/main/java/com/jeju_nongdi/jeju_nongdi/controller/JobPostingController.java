@@ -433,4 +433,140 @@ public class JobPostingController {
         return ResponseEntity.ok(JobPosting.JobStatus.values());
     }
 
+
+
+
+    @Operation(summary = "지도 영역 내 일손 모집 공고 조회",
+            description = "지정된 위도/경도 범위 내의 일손 모집 공고를 조회합니다.\n\n" +
+                    "**예시 좌표:**\n" +
+                    "- 전체 제주도: minLat=33.25, maxLat=33.50, minLng=126.26, maxLng=126.72\n" +
+                    "- 제주시 북부: minLat=33.39, maxLat=33.49, minLng=126.26, maxLng=126.53\n" +
+                    "- 서귀포시 남부: minLat=33.25, maxLat=33.33, minLng=126.40, maxLng=126.72")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "영역 내 공고 조회 성공",
+                    content = @Content(schema = @Schema(implementation = JobPostingResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 좌표값",
+                    content = @Content(schema = @Schema(implementation = com.jeju_nongdi.jeju_nongdi.dto.ApiResponse.class))
+            )
+    })
+    @GetMapping("/bounds")
+    public ResponseEntity<List<JobPostingResponse>> getJobPostingsByBounds(
+            @Parameter(description = "최소 위도 (제주도 전체 조회시: 33.25)",
+                    example = "33.25", required = true)
+            @RequestParam double minLat,
+
+            @Parameter(description = "최대 위도 (제주도 전체 조회시: 33.50)",
+                    example = "33.50", required = true)
+            @RequestParam double maxLat,
+
+            @Parameter(description = "최소 경도 (제주도 전체 조회시: 126.26)",
+                    example = "126.26", required = true)
+            @RequestParam double minLng,
+
+            @Parameter(description = "최대 경도 (제주도 전체 조회시: 126.72)",
+                    example = "126.72", required = true)
+            @RequestParam double maxLng,
+
+            @Parameter(description = "페이징 정보 (기본: 20개씩, 생성일 내림차순)")
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+
+        // 좌표 유효성 검증
+        if (minLat >= maxLat || minLng >= maxLng) {
+            throw new IllegalArgumentException("잘못된 좌표 범위입니다. 최소값은 최대값보다 작아야 합니다.");
+        }
+
+        List<JobPostingResponse> jobPostings = jobPostingService.getJobPostingsByBounds(
+                minLat, maxLat, minLng, maxLng, pageable);
+
+        return ResponseEntity.ok(jobPostings);
+    }
+
+    @Operation(summary = "지도 영역 내 일손 모집 공고 조회 (필터링 포함)",
+            description = "지정된 위도/경도 범위 내의 일손 모집 공고를 필터링과 함께 조회합니다.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "필터링된 영역 내 공고 조회 성공",
+                    content = @Content(schema = @Schema(implementation = JobPostingResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 좌표값 또는 필터값",
+                    content = @Content(schema = @Schema(implementation = com.jeju_nongdi.jeju_nongdi.dto.ApiResponse.class))
+            )
+    })
+    @GetMapping("/bounds/filter")
+    public ResponseEntity<List<JobPostingResponse>> getJobPostingsByBoundsWithFilters(
+            @Parameter(description = "최소 위도", example = "33.25", required = true)
+            @RequestParam double minLat,
+
+            @Parameter(description = "최대 위도", example = "33.50", required = true)
+            @RequestParam double maxLat,
+
+            @Parameter(description = "최소 경도", example = "126.26", required = true)
+            @RequestParam double minLng,
+
+            @Parameter(description = "최대 경도", example = "126.72", required = true)
+            @RequestParam double maxLng,
+
+            @Parameter(description = "작물 종류") 
+            @RequestParam(required = false) JobPosting.CropType cropType,
+
+            @Parameter(description = "작업 종류") 
+            @RequestParam(required = false) JobPosting.WorkType workType,
+
+            @Parameter(description = "주소 (일부 포함 검색)") 
+            @RequestParam(required = false) String address) {
+
+        // 좌표 유효성 검증
+        if (minLat >= maxLat || minLng >= maxLng) {
+            throw new IllegalArgumentException("잘못된 좌표 범위입니다. 최소값은 최대값보다 작아야 합니다.");
+        }
+
+        List<JobPostingResponse> jobPostings = jobPostingService.getJobPostingsByBoundsWithFilters(
+                minLat, maxLat, minLng, maxLng, cropType, workType, address);
+
+        return ResponseEntity.ok(jobPostings);
+    }
+
+    @Operation(summary = "지도 영역 내 마커용 데이터 조회",
+            description = "지정된 위도/경도 범위 내의 지도 마커용 간소화된 공고 데이터를 조회합니다.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "영역 내 마커 데이터 조회 성공",
+                    content = @Content(schema = @Schema(implementation = JobPostingMarkerResponse.class))
+            )
+    })
+    @GetMapping("/bounds/markers")
+    public ResponseEntity<List<JobPostingMarkerResponse>> getJobPostingMarkersByBounds(
+            @Parameter(description = "최소 위도", example = "33.25", required = true)
+            @RequestParam double minLat,
+
+            @Parameter(description = "최대 위도", example = "33.50", required = true)
+            @RequestParam double maxLat,
+
+            @Parameter(description = "최소 경도", example = "126.26", required = true)
+            @RequestParam double minLng,
+
+            @Parameter(description = "최대 경도", example = "126.72", required = true)
+            @RequestParam double maxLng) {
+
+        // 좌표 유효성 검증
+        if (minLat >= maxLat || minLng >= maxLng) {
+            throw new IllegalArgumentException("잘못된 좌표 범위입니다. 최소값은 최대값보다 작아야 합니다.");
+        }
+
+        List<JobPostingMarkerResponse> markers = jobPostingService.getJobPostingMarkersByBounds(
+                minLat, maxLat, minLng, maxLng);
+
+        return ResponseEntity.ok(markers);
+    }
+
 }
