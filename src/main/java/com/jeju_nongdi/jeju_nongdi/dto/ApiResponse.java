@@ -15,25 +15,14 @@ public class ApiResponse<T> {
     private T data;
 
     public static <T> ApiResponse<T> success(T data) {
-        return ApiResponse.<T>builder()
-                .success(true)
-                .message("성공")
-                .data(data)
-                .build();
+        return new ApiResponse<>(true, "성공", data);
     }
 
     public static <T> ApiResponse<T> success(String message, T data) {
-        return ApiResponse.<T>builder()
-                .success(true)
-                .message(message)
-                .data(data)
-                .build();
+        return new ApiResponse<>(true, message, data);
     }
 
     public static <T> ApiResponse<T> error(String message) {
-        return ApiResponse.<T>builder()
-                .success(false)
-                .message(message)
-                .build();
+        return new ApiResponse<>(false, message, null);
     }
 }

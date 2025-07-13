@@ -23,14 +23,14 @@ public class UserResponse {
 
     // Entity에서 Response로 변환하는 static factory method
     public static UserResponse from(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .name(user.getName())
-                .nickname(user.getNickname())
-                .phone(user.getPhone())
-                .role(user.getRole().name())
-                .createdAt(user.getCreatedAt())
-                .build();
+        UserResponse response = new UserResponse();
+        response.setId(user.getId());
+        response.setEmail(user.getEmail());
+        response.setName(user.getName());
+        response.setNickname(user.getNickname());
+        response.setPhone(user.getPhone());
+        response.setRole(user.getRole().name());
+        response.setCreatedAt(user.getCreatedAt());
+        return response;
     }
 }
