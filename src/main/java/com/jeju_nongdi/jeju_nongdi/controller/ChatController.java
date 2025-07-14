@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -81,7 +82,7 @@ public class ChatController {
     @SecurityRequirement(name = "Bearer Authentication")
     public ResponseEntity<Page<ChatMessageResponse>> getChatMessages(
             @Parameter(description = "채팅방 ID") @PathVariable String roomId,
-            @Parameter(description = "페이징 정보") @PageableDefault(size = 50) Pageable pageable,
+            @Parameter(description = "페이징 정보") @PageableDefault(size = 50, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             @Parameter(hidden = true) @AuthenticationPrincipal UserDetails userDetails) {
         
         log.info("Fetching messages for room: {}", roomId);
