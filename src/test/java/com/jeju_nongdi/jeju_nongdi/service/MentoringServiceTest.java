@@ -5,6 +5,7 @@ import com.jeju_nongdi.jeju_nongdi.dto.MentoringResponse;
 import com.jeju_nongdi.jeju_nongdi.entity.Mentoring;
 import com.jeju_nongdi.jeju_nongdi.entity.User;
 import com.jeju_nongdi.jeju_nongdi.repository.MentoringRepository;
+import com.jeju_nongdi.jeju_nongdi.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -36,7 +36,7 @@ class MentoringServiceTest {
     private MentoringRepository mentoringRepository;
 
     @Mock
-    private UserService userService;
+    private UserRepository userRepository;
 
     @Mock
     private UserDetails userDetails;
@@ -94,7 +94,7 @@ class MentoringServiceTest {
     void createMentoringSuccess() {
         // given
         given(userDetails.getUsername()).willReturn("mentor@test.com");
-        given(userService.getCurrentUser(anyString())).willReturn(user);
+        given(userRepository.findByEmail("mentor@test.com")).willReturn(Optional.of(user));
         given(mentoringRepository.save(any(Mentoring.class))).willReturn(mentoring);
 
         // when
@@ -115,8 +115,7 @@ class MentoringServiceTest {
         Pageable pageable = PageRequest.of(0, 20);
         Page<Mentoring> mentoringPage = new PageImpl<>(List.of(mentoring), pageable, 1);
         
-        given(mentoringRepository.findByStatusOrderByCreatedAtDesc(
-                Mentoring.MentoringStatus.ACTIVE, pageable)).willReturn(mentoringPage);
+        given(mentoringRepository.findByStatus(Mentoring.MentoringStatus.ACTIVE, pageable)).willReturn(mentoringPage);
 
         // when
         Page<MentoringResponse> result = mentoringService.getMentorings(pageable);
@@ -124,8 +123,8 @@ class MentoringServiceTest {
         // then
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getTitle()).isEqualTo("농업 기초 멘토링");
-        verify(mentoringRepository).findByStatusOrderByCreatedAtDesc(Mentoring.MentoringStatus.ACTIVE, pageable);
+        assertThat(result.getContent().getFirst().getTitle()).isEqualTo("농업 기초 멘토링");
+        verify(mentoringRepository).findByStatus(Mentoring.MentoringStatus.ACTIVE, pageable);
     }
 
     @Test
@@ -153,9 +152,9 @@ class MentoringServiceTest {
         given(mentoringRepository.findById(mentoringId)).willReturn(Optional.empty());
 
         // when & then
-        assertThrows(RuntimeException.class, () -> {
-            mentoringService.getMentoring(mentoringId);
-        });
+        assertThrows(RuntimeException.class, () ->
+            mentoringService.getMentoring(mentoringId)
+        );
     }
 
     @Test
@@ -177,7 +176,6 @@ class MentoringServiceTest {
 
         given(userDetails.getUsername()).willReturn("mentor@test.com");
         given(mentoringRepository.findById(mentoringId)).willReturn(Optional.of(mentoring));
-        given(userService.getCurrentUser(anyString())).willReturn(user);
         given(mentoringRepository.save(any(Mentoring.class))).willReturn(mentoring);
 
         // when
@@ -194,20 +192,14 @@ class MentoringServiceTest {
     void updateMentoringUnauthorized() {
         // given
         Long mentoringId = 1L;
-        User otherUser = User.builder()
-                .id(2L)
-                .email("other@test.com")
-                .name("다른 사용자")
-                .build();
-
+        
         given(userDetails.getUsername()).willReturn("other@test.com");
         given(mentoringRepository.findById(mentoringId)).willReturn(Optional.of(mentoring));
-        given(userService.getCurrentUser(anyString())).willReturn(otherUser);
 
         // when & then
-        assertThrows(RuntimeException.class, () -> {
-            mentoringService.updateMentoring(mentoringId, mentoringRequest, userDetails);
-        });
+        assertThrows(RuntimeException.class, () ->
+            mentoringService.updateMentoring(mentoringId, mentoringRequest, userDetails)
+        );
     }
 
     @Test
@@ -217,7 +209,6 @@ class MentoringServiceTest {
         Long mentoringId = 1L;
         given(userDetails.getUsername()).willReturn("mentor@test.com");
         given(mentoringRepository.findById(mentoringId)).willReturn(Optional.of(mentoring));
-        given(userService.getCurrentUser(anyString())).willReturn(user);
 
         // when
         mentoringService.deleteMentoring(mentoringId, userDetails);
@@ -236,7 +227,6 @@ class MentoringServiceTest {
         
         given(userDetails.getUsername()).willReturn("mentor@test.com");
         given(mentoringRepository.findById(mentoringId)).willReturn(Optional.of(mentoring));
-        given(userService.getCurrentUser(anyString())).willReturn(user);
         given(mentoringRepository.save(any(Mentoring.class))).willReturn(mentoring);
 
         // when
@@ -253,7 +243,7 @@ class MentoringServiceTest {
     void getMyMentoringsSuccess() {
         // given
         given(userDetails.getUsername()).willReturn("mentor@test.com");
-        given(userService.getCurrentUser(anyString())).willReturn(user);
+        given(userRepository.findByEmail("mentor@test.com")).willReturn(Optional.of(user));
         given(mentoringRepository.findByUserOrderByCreatedAtDesc(user)).willReturn(List.of(mentoring));
 
         // when
@@ -262,7 +252,7 @@ class MentoringServiceTest {
         // then
         assertThat(result).isNotNull();
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getTitle()).isEqualTo("농업 기초 멘토링");
+        assertThat(result.getFirst().getTitle()).isEqualTo("농업 기초 멘토링");
         verify(mentoringRepository).findByUserOrderByCreatedAtDesc(user);
     }
 
@@ -271,7 +261,7 @@ class MentoringServiceTest {
     void getMentoringsByTypeSuccess() {
         // given
         Mentoring.MentoringType mentoringType = Mentoring.MentoringType.MENTOR;
-        given(mentoringRepository.findByMentoringTypeAndStatusOrderByCreatedAtDesc(
+        given(mentoringRepository.findByMentoringTypeAndStatus(
                 mentoringType, Mentoring.MentoringStatus.ACTIVE)).willReturn(List.of(mentoring));
 
         // when
@@ -280,8 +270,8 @@ class MentoringServiceTest {
         // then
         assertThat(result).isNotNull();
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getMentoringType()).isEqualTo(mentoringType);
-        verify(mentoringRepository).findByMentoringTypeAndStatusOrderByCreatedAtDesc(
+        assertThat(result.getFirst().getMentoringType()).isEqualTo(mentoringType);
+        verify(mentoringRepository).findByMentoringTypeAndStatus(
                 mentoringType, Mentoring.MentoringStatus.ACTIVE);
     }
 
@@ -290,7 +280,7 @@ class MentoringServiceTest {
     void getMentoringsByCategorySuccess() {
         // given
         Mentoring.Category category = Mentoring.Category.CROP_CULTIVATION;
-        given(mentoringRepository.findByCategoryAndStatusOrderByCreatedAtDesc(
+        given(mentoringRepository.findByCategoryAndStatus(
                 category, Mentoring.MentoringStatus.ACTIVE)).willReturn(List.of(mentoring));
 
         // when
@@ -299,8 +289,8 @@ class MentoringServiceTest {
         // then
         assertThat(result).isNotNull();
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getCategory()).isEqualTo(category);
-        verify(mentoringRepository).findByCategoryAndStatusOrderByCreatedAtDesc(
+        assertThat(result.getFirst().getCategory()).isEqualTo(category);
+        verify(mentoringRepository).findByCategoryAndStatus(
                 category, Mentoring.MentoringStatus.ACTIVE);
     }
 }

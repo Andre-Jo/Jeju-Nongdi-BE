@@ -4,7 +4,6 @@ import com.jeju_nongdi.jeju_nongdi.client.price.PriceInfo;
 import com.jeju_nongdi.jeju_nongdi.client.weather.WeatherInfo;
 import com.jeju_nongdi.jeju_nongdi.entity.UserPreference;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -12,12 +11,6 @@ import java.util.List;
 @Component
 @Slf4j
 public class OpenAiClient {
-    
-    // ChatClient는 현재 사용하지 않음 (규칙 기반으로 구현)
-    // private final ChatClient chatClient;
-    
-    @Value("${spring.ai.openai.api-key:}")
-    private String openAiApiKey;
     
     /**
      * 날씨 기반 농업 조언 생성 (규칙 기반)
@@ -57,7 +50,9 @@ public class OpenAiClient {
                "추가 상세한 정보가 필요하시면 제주농업기술센터(064-760-7000)로 문의하세요.";
     }
     
-    // 폴백 메서드들 (AI API 실패 시 사용)
+    /**
+     * 날씨 기반 농업 조언 생성 (폴백 메서드)
+     */
     private String generateFallbackWeatherAdvice(WeatherInfo weather) {
         StringBuilder advice = new StringBuilder();
         advice.append("🌡️ 오늘의 날씨 요약\n");
@@ -80,6 +75,9 @@ public class OpenAiClient {
         return advice.toString();
     }
     
+    /**
+     * 작물별 기본 관리 가이드 생성 (폴백 메서드)
+     */
     private String generateFallbackCropGuide(String cropName) {
         return String.format("""
                 🌱 %s 기본 관리 가이드
@@ -94,6 +92,9 @@ public class OpenAiClient {
                 """, cropName);
     }
     
+    /**
+     * 가격 기반 수익성 분석 생성 (폴백 메서드)
+     */
     private String generateFallbackProfitAnalysis(List<PriceInfo> priceInfos) {
         StringBuilder analysis = new StringBuilder();
         analysis.append("📊 가격 동향 분석\n");

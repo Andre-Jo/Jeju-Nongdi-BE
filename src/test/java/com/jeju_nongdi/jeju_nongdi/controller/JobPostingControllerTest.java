@@ -51,16 +51,9 @@ class JobPostingControllerTest {
 
     private JobPostingRequest testRequest;
     private JobPostingResponse testResponse;
-    private User testUser;
 
     @BeforeEach
     void setUp() {
-        // 테스트용 사용자 생성
-        testUser = User.builder()
-                .id(1L)
-                .email("test@example.com")
-                .nickname("농부김씨")
-                .build();
 
         // 테스트용 요청 객체
         testRequest = JobPostingRequest.builder()

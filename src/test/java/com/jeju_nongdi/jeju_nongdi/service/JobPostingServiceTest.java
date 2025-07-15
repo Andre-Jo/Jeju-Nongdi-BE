@@ -165,7 +165,7 @@ class JobPostingServiceTest {
     void getActiveJobPostings_Success() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
-        List<JobPosting> jobPostings = Arrays.asList(testJobPosting);
+        List<JobPosting> jobPostings = List.of(testJobPosting);
         Page<JobPosting> jobPostingPage = new PageImpl<>(jobPostings, pageable, 1);
 
         given(jobPostingRepository.findByStatusOrderByCreatedAtDesc(JobPosting.JobStatus.ACTIVE, pageable))
@@ -177,14 +177,14 @@ class JobPostingServiceTest {
         // then
         assertThat(response).isNotNull();
         assertThat(response.getContent()).hasSize(1);
-        assertThat(response.getContent().get(0).getTitle()).isEqualTo(testJobPosting.getTitle());
+        assertThat(response.getContent().getFirst().getTitle()).isEqualTo(testJobPosting.getTitle());
     }
 
     @Test
     @DisplayName("필터 조건으로 공고를 조회한다")
     void getFilteredJobPostings_Success() {
         // given
-        List<JobPosting> jobPostings = Arrays.asList(testJobPosting);
+        List<JobPosting> jobPostings = List.of(testJobPosting);
         given(jobPostingRepository.findWithFilters(any(), any(), any(), any(), any()))
                 .willReturn(jobPostings);
 
@@ -194,15 +194,15 @@ class JobPostingServiceTest {
 
         // then
         assertThat(response).hasSize(1);
-        assertThat(response.get(0).getCropType()).isEqualTo(JobPosting.CropType.POTATO);
-        assertThat(response.get(0).getWorkType()).isEqualTo(JobPosting.WorkType.HARVESTING);
+        assertThat(response.getFirst().getCropType()).isEqualTo(JobPosting.CropType.POTATO);
+        assertThat(response.getFirst().getWorkType()).isEqualTo(JobPosting.WorkType.HARVESTING);
     }
 
     @Test
     @DisplayName("지도 마커용 데이터를 조회한다")
     void getJobPostingMarkers_Success() {
         // given
-        List<JobPosting> jobPostings = Arrays.asList(testJobPosting);
+        List<JobPosting> jobPostings = List.of(testJobPosting);
         given(jobPostingRepository.findAllForMap(JobPosting.JobStatus.ACTIVE)).willReturn(jobPostings);
 
         // when
@@ -210,16 +210,16 @@ class JobPostingServiceTest {
 
         // then
         assertThat(response).hasSize(1);
-        assertThat(response.get(0).getId()).isEqualTo(testJobPosting.getId());
-        assertThat(response.get(0).getLatitude()).isEqualTo(testJobPosting.getLatitude());
-        assertThat(response.get(0).getLongitude()).isEqualTo(testJobPosting.getLongitude());
+        assertThat(response.getFirst().getId()).isEqualTo(testJobPosting.getId());
+        assertThat(response.getFirst().getLatitude()).isEqualTo(testJobPosting.getLatitude());
+        assertThat(response.getFirst().getLongitude()).isEqualTo(testJobPosting.getLongitude());
     }
 
     @Test
     @DisplayName("사용자별 공고를 조회한다")
     void getJobPostingsByUser_Success() {
         // given
-        List<JobPosting> jobPostings = Arrays.asList(testJobPosting);
+        List<JobPosting> jobPostings = List.of(testJobPosting);
         given(userRepository.findByEmail(testUser.getEmail())).willReturn(Optional.of(testUser));
         given(jobPostingRepository.findByAuthorOrderByCreatedAtDesc(testUser)).willReturn(jobPostings);
 
@@ -228,7 +228,7 @@ class JobPostingServiceTest {
 
         // then
         assertThat(response).hasSize(1);
-        assertThat(response.get(0).getAuthor().getEmail()).isEqualTo(testUser.getEmail());
+        assertThat(response.getFirst().getAuthor().getEmail()).isEqualTo(testUser.getEmail());
     }
 
     @Test

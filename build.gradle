@@ -45,9 +45,6 @@ dependencies {
 	// 외부 API 연동을 위한 의존성
 	implementation 'org.springframework.boot:spring-boot-starter-webflux' // WebClient 사용
 	implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml' // XML 파싱
-	
-	// Spring AI for OpenAI (Snapshot repository)
-	implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:1.0.0-M4'
 
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'

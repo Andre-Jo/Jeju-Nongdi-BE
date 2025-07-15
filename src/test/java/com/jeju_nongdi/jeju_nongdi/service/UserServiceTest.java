@@ -102,9 +102,9 @@ class UserServiceTest {
         given(userRepository.existsByEmail(anyString())).willReturn(true);
 
         // when & then
-        assertThrows(EmailAlreadyExistsException.class, () -> {
-            userService.signup(signupRequest);
-        });
+        assertThrows(EmailAlreadyExistsException.class, () ->
+            userService.signup(signupRequest)
+        );
     }
 
     @Test
@@ -115,18 +115,15 @@ class UserServiceTest {
         given(userRepository.existsByNickname(anyString())).willReturn(true);
 
         // when & then
-        assertThrows(NicknameAlreadyExistsException.class, () -> {
-            userService.signup(signupRequest);
-        });
+        assertThrows(NicknameAlreadyExistsException.class, () ->
+            userService.signup(signupRequest)
+        );
     }
 
     @Test
     @DisplayName("로그인 성공 테스트")
     void loginSuccess() {
         // given
-        UsernamePasswordAuthenticationToken authToken = 
-                new UsernamePasswordAuthenticationToken(loginRequest.email(), loginRequest.password());
-
         given(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .willReturn(authentication);
         given(authentication.getPrincipal()).willReturn(user);
@@ -165,8 +162,8 @@ class UserServiceTest {
         given(userRepository.findByEmail(anyString())).willReturn(Optional.empty());
 
         // when & then
-        assertThrows(RuntimeException.class, () -> {
-            userService.getCurrentUser("nonexistent@example.com");
-        });
+        assertThrows(RuntimeException.class, () ->
+            userService.getCurrentUser("nonexistent@example.com")
+        );
     }
 }
