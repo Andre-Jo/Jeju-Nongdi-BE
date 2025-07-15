@@ -3,6 +3,8 @@ package com.jeju_nongdi.jeju_nongdi.controller;
 import com.jeju_nongdi.jeju_nongdi.dto.ai.AiTipResponseDto;
 import com.jeju_nongdi.jeju_nongdi.dto.ai.DailyTipRequestDto;
 import com.jeju_nongdi.jeju_nongdi.dto.ai.DailyTipSummaryDto;
+import com.jeju_nongdi.jeju_nongdi.dto.ai.TodayFarmLifeDto;
+import com.jeju_nongdi.jeju_nongdi.dto.ai.NotificationListDto;
 import com.jeju_nongdi.jeju_nongdi.entity.AiTip;
 import com.jeju_nongdi.jeju_nongdi.service.AiTipService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +27,49 @@ import java.util.List;
 public class AiTipController {
     
     private final AiTipService aiTipService;
+    
+    @GetMapping("/today/{userId}")
+    @Operation(summary = "오늘의 농살 - 메인 화면용", description = "메인 화면에 표시할 오늘의 농업 팁 요약 정보를 조회합니다.")
+    public ResponseEntity<TodayFarmLifeDto> getTodayFarmLife(
+            @Parameter(description = "사용자 ID") @PathVariable Long userId) {
+        
+        DailyTipRequestDto requestDto = DailyTipRequestDto.builder()
+                .targetDate(LocalDate.now())
+                .onlyUnread(false)
+                .build();
+        
+        DailyTipSummaryDto summary = aiTipService.getDailyTips(userId, requestDto);
+        
+        // 메인 화면용으로 간소화된 정보 제공
+        TodayFarmLifeDto todayInfo = TodayFarmLifeDto.builder()
+                .date(LocalDate.now())
+                .weatherSummary(summary.getWeatherSummary())
+                .mainTip(getMainTipFromSummary(summary))
+                .urgentCount(summary.getUrgentTips())
+                .totalTipCount(summary.getTotalTips())
+                .unreadCount(summary.getUnreadTips())
+                .todayTasks(summary.getTodayTasks())
+                .build();
+        
+        return ResponseEntity.ok(todayInfo);
+    }
+    
+    @GetMapping("/notifications/{userId}")
+    @Operation(summary = "알림 리스트 조회", description = "돌하르방 클릭시 표시할 알림 리스트를 조회합니다.")
+    public ResponseEntity<NotificationListDto> getNotificationList(
+            @Parameter(description = "사용자 ID") @PathVariable Long userId,
+            @Parameter(description = "페이지 번호") @RequestParam(required = false, defaultValue = "0") Integer page,
+            @Parameter(description = "페이지 크기") @RequestParam(required = false, defaultValue = "20") Integer size,
+            @Parameter(description = "팁 유형 필터") @RequestParam(required = false) List<String> tipTypes) {
+        
+        // 최근 30일간의 알림 조회
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(30);
+        
+        NotificationListDto notifications = aiTipService.getNotificationList(userId, startDate, endDate, page, size, tipTypes);
+        
+        return ResponseEntity.ok(notifications);
+    }
     
     @GetMapping("/daily/{userId}")
     @Operation(summary = "일일 맞춤 팁 조회", description = "특정 사용자의 일일 맞춤 농업 팁을 조회합니다.")
@@ -163,4 +208,67 @@ public class AiTipController {
     
     // 팁 유형 정보 클래스
     public record TipTypeInfo(String code, String description, String icon) {}
+    
+    // 메인 팁 선별 헬퍼 메서드
+    private TodayFarmLifeDto.MainTipInfo getMainTipFromSummary(DailyTipSummaryDto summary) {
+        if (summary.getTips() == null || summary.getTips().isEmpty()) {
+            return createDefaultMainTip();
+        }
+        
+        // 우선순위가 높은 팁 중에서 첫 번째 선택
+        AiTipResponseDto selectedTip = summary.getTips().stream()
+                .filter(tip -> tip.getPriorityLevel() >= 3) // 높은 우선순위만
+                .findFirst()
+                .orElse(summary.getTips().get(0)); // 없으면 첫 번째 팁
+        
+        return TodayFarmLifeDto.MainTipInfo.builder()
+                .tipId(selectedTip.getId())
+                .tipType(selectedTip.getTipType())
+                .icon(getTipIcon(selectedTip.getTipType()))
+                .title(selectedTip.getTitle())
+                .summary(truncateContent(selectedTip.getContent(), 100))
+                .priority(selectedTip.getPriorityLevel())
+                .cropType(selectedTip.getCropType())
+                .build();
+    }
+    
+    private TodayFarmLifeDto.MainTipInfo createDefaultMainTip() {
+        return TodayFarmLifeDto.MainTipInfo.builder()
+                .tipId(0L)
+                .tipType("GENERAL")
+                .icon("🌾")
+                .title("오늘도 좋은 하루 되세요!")
+                .summary("새로운 농업 팁이 준비되는 중입니다.")
+                .priority(1)
+                .build();
+    }
+    
+    private String getTipIcon(String tipType) {
+        return switch (tipType) {
+            case "WEATHER_ALERT" -> "🌡️";
+            case "CROP_GUIDE" -> "🌱";
+            case "PEST_ALERT" -> "🚨";
+            case "PROFIT_TIP" -> "📊";
+            case "AUTOMATION_SUGGESTION" -> "⚡";
+            case "LABOR_MATCHING" -> "🎯";
+            default -> "🌾";
+        };
+    }
+    
+    private String truncateContent(String content, int maxLength) {
+        if (content == null) {
+            return "";
+        }
+        
+        // 줄바꿈과 이모티콘 제거하고 순수 텍스트만 추출
+        String cleanContent = content.replaceAll("[\\n\\r]", " ")
+                                   .replaceAll("[🌡️🌱🚨📊⚡🎯🍊🥕🥔🌾🔥☔✅💧🌿🍂📦❄️🐛🍄🕷️🦗🦠]", "")
+                                   .trim();
+        
+        if (cleanContent.length() <= maxLength) {
+            return cleanContent;
+        }
+        
+        return cleanContent.substring(0, maxLength - 3) + "...";
+    }
 }
