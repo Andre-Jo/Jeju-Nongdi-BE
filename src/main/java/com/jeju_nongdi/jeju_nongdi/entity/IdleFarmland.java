@@ -135,7 +135,7 @@ public class IdleFarmland {
                           UsageType usageType, SoilType soilType, Integer rentPrice,
                           String additionalInfo, String contactEmail, String contactPhone) {
         this.title = title;
-        this.description = additionalInfo; // additionalInfo로 description 업데이트
+        this.description = description; // description 그대로 업데이트
         this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;

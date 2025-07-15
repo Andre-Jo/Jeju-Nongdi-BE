@@ -194,15 +194,4 @@ public class JobPostingIntegrationTest {
                 .andExpect(jsonPath("$[0].title").value(testJobPostingRequest.getTitle()));
     }
 
-    // TODO: 인증 관련 테스트 로직 재검토 필요
-    // @Test
-    // @DisplayName("인증되지 않은 사용자의 공고 생성 실패 테스트")
-    // void createJobPostingWithoutAuthenticationTest() throws Exception {
-    //     mockMvc.perform(post("/api/job-postings")
-    //             .with(csrf()) // CSRF 토큰은 있지만 JWT 토큰은 없음
-    //             .contentType(MediaType.APPLICATION_JSON)
-    //             .content(objectMapper.writeValueAsString(testJobPostingRequest)))
-    //             .andDo(print())
-    //             .andExpect(status().isUnauthorized()); // JWT 인증 실패로 401 Unauthorized
-    // }
 }

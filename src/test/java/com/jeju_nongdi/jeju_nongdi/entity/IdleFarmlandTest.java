@@ -110,7 +110,7 @@ class IdleFarmlandTest {
         assertThat(idleFarmland.getUsageType()).isEqualTo(IdleFarmland.UsageType.LIVESTOCK);
         assertThat(idleFarmland.getSoilType()).isEqualTo(IdleFarmland.SoilType.CLAY);
         assertThat(idleFarmland.getRentPrice()).isEqualTo(600000);
-        assertThat(idleFarmland.getAdditionalInfo()).isEqualTo("수정된 추가 정보");
+        assertThat(idleFarmland.getAdditionalInfo()).isEqualTo("수정된 설명"); // getAdditionalInfo()는 description을 반환
         assertThat(idleFarmland.getContactEmail()).isEqualTo("updated@test.com");
         assertThat(idleFarmland.getContactPhone()).isEqualTo("010-1111-1111");
     }
