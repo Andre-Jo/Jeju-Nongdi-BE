@@ -64,7 +64,10 @@ public class IdleFarmlandController {
                     content = @Content(schema = @Schema(implementation = IdleFarmlandResponse.class)))
     })
     public ResponseEntity<Page<IdleFarmlandResponse>> getIdleFarmlands(
-            @Parameter(description = "페이징 정보") @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @Parameter(
+                description = "페이징 정보", 
+                example = "{\"page\": 0, \"size\": 20, \"sort\": \"createdAt,desc\"}"
+            ) @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         
         log.info("Fetching idle farmlands with pagination");
         Page<IdleFarmlandResponse> response = idleFarmlandService.getIdleFarmlands(pageable);
