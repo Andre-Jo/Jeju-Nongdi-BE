@@ -82,7 +82,11 @@ public class ChatController {
     @SecurityRequirement(name = "Bearer Authentication")
     public ResponseEntity<Page<ChatMessageResponse>> getChatMessages(
             @Parameter(description = "채팅방 ID") @PathVariable String roomId,
-            @Parameter(description = "페이징 정보") @PageableDefault(size = 50, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @Parameter(
+                    description = "페이징 정보",
+                    example = "{\"page\": 0, \"size\": 50, \"sort\": \"createdAt,desc\"}"
+            )
+            @PageableDefault(size = 50, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             @Parameter(hidden = true) @AuthenticationPrincipal UserDetails userDetails) {
         
         log.info("Fetching messages for room: {}", roomId);

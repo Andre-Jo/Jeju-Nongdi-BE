@@ -84,8 +84,10 @@ public class JobPostingController {
             )
     })
     public ResponseEntity<Page<JobPostingResponse>> getJobPostings(
-            @Parameter(description = "페이징 정보") 
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @Parameter(
+                description = "페이징 정보", 
+                example = "{\"page\": 0, \"size\": 20, \"sort\": \"createdAt,desc\"}"
+            ) @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<JobPostingResponse> jobPostings = jobPostingService.getActiveJobPostings(pageable);
         return ResponseEntity.ok(jobPostings);
@@ -472,7 +474,10 @@ public class JobPostingController {
                     example = "126.72", required = true)
             @RequestParam double maxLng,
 
-            @Parameter(description = "페이징 정보 (기본: 20개씩, 생성일 내림차순)")
+            @Parameter(
+                    description = "페이징 정보",
+                    example = "{\"page\": 0, \"size\": 20, \"sort\": \"createdAt,desc\"}"
+            )
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable) {
 

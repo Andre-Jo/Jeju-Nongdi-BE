@@ -64,7 +64,11 @@ public class MentoringController {
                     content = @Content(schema = @Schema(implementation = MentoringResponse.class)))
     })
     public ResponseEntity<Page<MentoringResponse>> getMentorings(
-            @Parameter(description = "페이징 정보") @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @Parameter(
+                    description = "페이징 정보",
+                    example = "{\"page\": 0, \"size\": 20, \"sort\": \"createdAt,desc\"}"
+            )
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         
         log.info("Fetching mentoring posts with pagination");
         Page<MentoringResponse> response = mentoringService.getMentorings(pageable);
