@@ -193,8 +193,8 @@ public class WeatherApiClient {
 
         return webClient.get()
                 .uri(uriBuilder -> {
+                    // serviceKey는 자동 인코딩을 피하기 위해 수동으로 추가
                     var uri = uriBuilder
-                            .queryParam("serviceKey", serviceKey)
                             .queryParam("numOfRows", "300")
                             .queryParam("dataType", "JSON")
                             .queryParam("pageNo", "1")
@@ -202,9 +202,14 @@ public class WeatherApiClient {
                             .queryParam("base_time", baseTime)
                             .queryParam("nx", nx)
                             .queryParam("ny", ny)
-                            .build();
-                    log.info("요청 전체 URI: {}", uri);
-                    return uri;
+                            .build(false); // 자동 인코딩 비활성화
+
+                    // 수동으로 serviceKey만 추가
+                    String baseUri = uri.toString();
+                    String fullUri = baseUri + "&serviceKey=" + serviceKey;
+
+                    log.info("요청 전체 URI: {}", fullUri);
+                    return java.net.URI.create(fullUri);
                 })
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
@@ -234,8 +239,8 @@ public class WeatherApiClient {
      * 현재 시간에 맞는 기상청 기준시간 계산
      */
     private String getCurrentBaseTime() {
-        int currentHour = LocalDateTime.now().getHour();
-        
+        // 기상청 데이터 1시간 전 데이터만 존재함 현재시간 데이터 없던디 ,,
+        int currentHour = LocalDateTime.now().minusHours(1).getHour();
         if (currentHour >= 23 || currentHour < 2) return "2300";
         else if (currentHour >= 20) return "2000";
         else if (currentHour >= 17) return "1700";
