@@ -62,8 +62,8 @@ public class WeatherApiClient {
     public static class DailyWeather {
         private String date; // YYYYMMDD
         private String dayLabel; // "오늘", "내일", "3일후" 등
-        private Integer maxTemp;
-        private Integer minTemp;
+        private Double maxTemp;
+        private Double minTemp;
         private Integer maxRainProb; // 하루 중 최대 강수확률
         private Integer totalRainfall; // 일 총 강수량 (mm)
         private String skyCondition;
@@ -422,8 +422,8 @@ public class WeatherApiClient {
                 
                 switch (category) {
                     case "TMP" -> builder.addTemperature(Integer.parseInt(fcstValue));
-                    case "TMX" -> builder.setMaxTemp(Integer.parseInt(fcstValue));
-                    case "TMN" -> builder.setMinTemp(Integer.parseInt(fcstValue));
+                    case "TMX" -> builder.setMaxTemp(Double.parseDouble(fcstValue));
+                    case "TMN" -> builder.setMinTemp(Double.parseDouble(fcstValue));
                     case "POP" -> builder.addRainProb(Integer.parseInt(fcstValue));
                     case "PCP" -> builder.addRainfall(parseRainfall(fcstValue));
                     case "SKY" -> builder.setSkyCondition(parseSkyCondition(fcstValue)); 
@@ -602,7 +602,7 @@ public class WeatherApiClient {
             DailyWeather tomorrow = forecasts.get(i);
             
             if (today.getMaxTemp() != null && tomorrow.getMaxTemp() != null) {
-                int tempDiff = Math.abs(tomorrow.getMaxTemp() - today.getMaxTemp());
+                int tempDiff = (int) Math.abs(tomorrow.getMaxTemp() - today.getMaxTemp());
                 
                 if (tempDiff >= 15) {
                     List<String> actions = Arrays.asList(
@@ -710,7 +710,7 @@ public class WeatherApiClient {
                 throw new RuntimeException("기상청 API 응답에 데이터가 없습니다.");
             }
             
-            Integer maxTemp = null, minTemp = null;
+            Double maxTemp = null, minTemp = null;
             String temperature = null, humidity = null, skyCondition = null, windSpeed = null;
             Integer rainProbability = null;
             
@@ -725,8 +725,8 @@ public class WeatherApiClient {
                 
                 switch (category) {
                     case "TMP" -> temperature = fcstValue;
-                    case "TMX" -> maxTemp = Integer.parseInt(fcstValue);
-                    case "TMN" -> minTemp = Integer.parseInt(fcstValue);
+                    case "TMX" -> maxTemp = (double) Integer.parseInt(fcstValue);
+                    case "TMN" -> minTemp = (double) Integer.parseInt(fcstValue);
                     case "REH" -> humidity = fcstValue;
                     case "POP" -> rainProbability = Integer.parseInt(fcstValue);
                     case "SKY" -> skyCondition = parseSkyCondition(fcstValue);
@@ -875,8 +875,8 @@ public class WeatherApiClient {
      */
     private static class DailyWeatherBuilder {
         private final String date;
-        private Integer maxTemp = null;
-        private Integer minTemp = null;
+        private Double maxTemp = null;
+        private Double minTemp = null;
         private final List<Integer> temperatures = new ArrayList<>();
         private final List<Integer> rainProbs = new ArrayList<>();
         private final List<Integer> rainfalls = new ArrayList<>();
@@ -888,17 +888,17 @@ public class WeatherApiClient {
         }
         
         public void addTemperature(int temp) { temperatures.add(temp); }
-        public void setMaxTemp(int temp) { this.maxTemp = temp; }
-        public void setMinTemp(int temp) { this.minTemp = temp; }
+        public void setMaxTemp(double temp) { this.maxTemp = temp; }
+        public void setMinTemp(double temp) { this.minTemp = temp; }
         public void addRainProb(int prob) { rainProbs.add(prob); }
         public void addRainfall(int rainfall) { rainfalls.add(rainfall); }
         public void addWindSpeed(double speed) { windSpeeds.add(speed); }
         public void setSkyCondition(String condition) { this.skyCondition = condition; }
         
         public DailyWeather build(String dayLabel) {
-            Integer finalMaxTemp = maxTemp != null ? maxTemp : 
-                temperatures.stream().max(Integer::compareTo).orElse(25);
-            Integer finalMinTemp = minTemp != null ? minTemp : 
+            Double finalMaxTemp = Double.valueOf(maxTemp != null ? maxTemp :
+                temperatures.stream().max(Integer::compareTo).orElse(25));
+            Double finalMinTemp = minTemp != null ? minTemp :
                 temperatures.stream().min(Integer::compareTo).orElse(20);
             Integer maxRainProb = rainProbs.stream().max(Integer::compareTo).orElse(0);
             Integer totalRain = rainfalls.stream().mapToInt(Integer::intValue).sum();

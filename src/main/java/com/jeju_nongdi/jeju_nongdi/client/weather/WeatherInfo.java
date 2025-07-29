@@ -12,8 +12,8 @@ import lombok.NoArgsConstructor;
 public class WeatherInfo {
     
     private String temperature; // 기온 (°C)
-    private Integer maxTemperature; // 최고기온 (°C)
-    private Integer minTemperature; // 최저기온 (°C)
+    private Double maxTemperature; // 최고기온 (°C)
+    private Double minTemperature; // 최저기온 (°C)
     private String humidity; // 습도 (%)
     private Integer rainProbability; // 강수확률 (%)
     private String skyCondition; // 하늘상태 (맑음, 구름많음, 흐림)
@@ -43,23 +43,23 @@ public class WeatherInfo {
         }
     }
     
-    public Integer getMaxTemperature() {
+    public Double getMaxTemperature() {
         if (maxTemperature != null) {
             return maxTemperature;
         }
         try {
-            return (int) Double.parseDouble(temperature);
+            return (Double) Double.parseDouble(temperature);
         } catch (NumberFormatException e) {
             return null;
         }
     }
     
-    public Integer getMinTemperature() {
+    public Double getMinTemperature() {
         if (minTemperature != null) {
             return minTemperature;
         }
         try {
-            return (int) Double.parseDouble(temperature);
+            return (Double) Double.parseDouble(temperature);
         } catch (NumberFormatException e) {
             return null;
         }
