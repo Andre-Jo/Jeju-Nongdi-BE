@@ -6,7 +6,6 @@ build/
 !**/src/test/**/build/
 
 ### Secure File ###
-application.properties
 
 ### STS ###
 .apt_generated
@@ -41,7 +40,6 @@ out/
 
 ### 보안 정보가 포함된 파일들 ###
 # DB 정보와 API 키가 포함된 설정 파일
-src/main/resources/application.properties
 
 # 환경변수 파일들
 .env
