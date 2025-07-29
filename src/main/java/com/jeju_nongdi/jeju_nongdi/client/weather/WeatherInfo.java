@@ -23,10 +23,10 @@ public class WeatherInfo {
     // 농업 작업 관련 편의 메서드들
     public boolean isHighTemperature() {
         if (maxTemperature != null) {
-            return maxTemperature > 30;
+            return maxTemperature > 35;
         }
         try {
-            return Double.parseDouble(temperature) > 30;
+            return Double.parseDouble(temperature) > 35;
         } catch (NumberFormatException e) {
             return false;
         }
