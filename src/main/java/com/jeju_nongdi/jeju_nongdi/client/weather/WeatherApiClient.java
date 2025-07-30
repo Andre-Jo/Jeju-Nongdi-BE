@@ -434,7 +434,8 @@ public class WeatherApiClient {
             // 일별 예보 생성
             List<DailyWeather> dailyForecasts = new ArrayList<>();
             LocalDate today = LocalDate.now();
-            
+            int currentHour = LocalDateTime.now().getHour();
+
             for (int i = 0; i < 5; i++) {
                 LocalDate targetDate = today.plusDays(i);
                 String dateStr = targetDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -442,7 +443,15 @@ public class WeatherApiClient {
                 
                 DailyWeatherBuilder builder = dailyData.get(dateStr);
                 if (builder != null) {
-                    dailyForecasts.add(builder.build(dayLabel));
+                    DailyWeather weather = builder.build(dayLabel);
+
+                    // ★ “4일 후”(i==4)이고, 현재 시각이 17시 미만이면 온도 필드 null 처리
+                    if (i == 4 && currentHour < 17) {
+                        weather.setMaxTemp(null);
+                        weather.setMinTemp(null);
+                    }
+
+                    dailyForecasts.add(weather);
                 }
             }
             
@@ -491,7 +500,7 @@ public class WeatherApiClient {
         for (int i = 0; i < forecasts.size(); i++) {
             DailyWeather day = forecasts.get(i);
             
-            if (day.getMaxTemp() != null && day.getMaxTemp() >= 35) {
+            if (day.getMaxTemp() != null && day.getMaxTemp() >= 30) {
                 if (consecutiveHotDays == 0) {
                     startDay = i;
                 }
@@ -511,7 +520,7 @@ public class WeatherApiClient {
                     alerts.add(new WeatherAlert(
                         "HEATWAVE",
                         String.format("🔥 %s부터 %d일간 연속 폭염 예상!", dayLabel, consecutiveHotDays),
-                        String.format("최고기온 %d°C 이상이 %d일간 지속됩니다", 
+                        String.format("최고기온 %.1f°C 이상이 %d일간 지속됩니다",
                                 forecasts.get(startDay).getMaxTemp(), consecutiveHotDays),
                         forecasts.get(startDay).getDate(),
                         consecutiveHotDays,
@@ -602,7 +611,7 @@ public class WeatherApiClient {
             DailyWeather tomorrow = forecasts.get(i);
             
             if (today.getMaxTemp() != null && tomorrow.getMaxTemp() != null) {
-                int tempDiff = (int) Math.abs(tomorrow.getMaxTemp() - today.getMaxTemp());
+                double tempDiff = Math.abs(tomorrow.getMaxTemp() - today.getMaxTemp());
                 
                 if (tempDiff >= 15) {
                     List<String> actions = Arrays.asList(
@@ -614,7 +623,7 @@ public class WeatherApiClient {
                     alerts.add(new WeatherAlert(
                         "TEMP_CHANGE",
                         String.format("⚠️ %s 급격한 기온 변화!", tomorrow.getDayLabel()),
-                        String.format("기온이 %d°C → %d°C로 %d°C 변화", 
+                        String.format("기온이 %.1f°C → %.1f°C로 %.1f°C 변화",
                                 today.getMaxTemp(), tomorrow.getMaxTemp(), tempDiff),
                         tomorrow.getDate(),
                         1,
@@ -725,8 +734,8 @@ public class WeatherApiClient {
                 
                 switch (category) {
                     case "TMP" -> temperature = fcstValue;
-                    case "TMX" -> maxTemp = (double) Integer.parseInt(fcstValue);
-                    case "TMN" -> minTemp = (double) Integer.parseInt(fcstValue);
+                    case "TMX" -> maxTemp = Double.parseDouble(fcstValue);
+                    case "TMN" -> minTemp = Double.parseDouble(fcstValue);
                     case "REH" -> humidity = fcstValue;
                     case "POP" -> rainProbability = Integer.parseInt(fcstValue);
                     case "SKY" -> skyCondition = parseSkyCondition(fcstValue);
@@ -849,27 +858,7 @@ public class WeatherApiClient {
         
         return tips;
     }
-    
-    public Mono<String> getCurrentWeatherSummary() {
-        return getJejuWeatherForecast()
-                .map(weather -> String.format("현재 제주 날씨: %s, 기온 %s°C, 습도 %s%%", 
-                        weather.getSkyCondition(), weather.getTemperature(), weather.getHumidity()));
-    }
-    
-    public Mono<String> getFarmWorkRecommendation() {
-        return getJejuWeatherForecast()
-                .map(weather -> {
-                    double temp = Double.parseDouble(weather.getTemperature());
-                    int humidity = Integer.parseInt(weather.getHumidity());
-                    
-                    if (temp > 30) return "고온 주의: 오전 7시 이전 또는 오후 6시 이후 작업 권장";
-                    else if (temp < 5) return "저온 주의: 실내 작업 또는 방한 대비 필수";
-                    else if (humidity > 80) return "고습 주의: 통풍이 잘 되는 곳에서 작업";
-                    else if (weather.getRainProbability() > 60) return "강수 예상: 실내 작업 권장";
-                    else return "농업 작업에 적합한 날씨입니다";
-                });
-    }
-    
+
     /**
      * 일별 날씨 데이터 빌더 클래스
      */
@@ -897,9 +886,9 @@ public class WeatherApiClient {
         
         public DailyWeather build(String dayLabel) {
             Double finalMaxTemp = Double.valueOf(maxTemp != null ? maxTemp :
-                temperatures.stream().max(Integer::compareTo).orElse(25));
+                temperatures.stream().max(Integer::compareTo).orElse(null));
             Double finalMinTemp = minTemp != null ? minTemp :
-                temperatures.stream().min(Integer::compareTo).orElse(20);
+                temperatures.stream().min(Integer::compareTo).orElse(null);
             Integer maxRainProb = rainProbs.stream().max(Integer::compareTo).orElse(0);
             Integer totalRain = rainfalls.stream().mapToInt(Integer::intValue).sum();
             Double maxWind = windSpeeds.stream().max(Double::compareTo).orElse(0.0);
