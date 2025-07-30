@@ -297,7 +297,7 @@ public class JobPostingController {
         }
 
         jobPostingService.deleteJobPosting(id, userDetails.getUsername());
-        return ResponseEntity.ok(com.jeju_nongdi.jeju_nongdi.dto.ApiResponse.success("공고가 성공적으로 삭제되었습니다.", null));
+        return ResponseEntity.ok(com.jeju_nongdi.jeju_nongdi.dto.ApiResponse.success("공고가 성공적으로 삭제되었습니다.", (Void) null));
     }
 
     @PatchMapping("/{id}/status")

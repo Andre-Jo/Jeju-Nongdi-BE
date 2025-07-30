@@ -1,8 +1,6 @@
 package com.jeju_nongdi.jeju_nongdi.service;
 
-import com.jeju_nongdi.jeju_nongdi.dto.AuthResponse;
-import com.jeju_nongdi.jeju_nongdi.dto.LoginRequest;
-import com.jeju_nongdi.jeju_nongdi.dto.SignupRequest;
+import com.jeju_nongdi.jeju_nongdi.dto.*;
 import com.jeju_nongdi.jeju_nongdi.entity.User;
 import com.jeju_nongdi.jeju_nongdi.exception.EmailAlreadyExistsException;
 import com.jeju_nongdi.jeju_nongdi.exception.NicknameAlreadyExistsException;
@@ -43,6 +41,7 @@ public class UserService {
                 .password(passwordEncoder.encode(request.password()))
                 .name(request.name())
                 .nickname(request.nickname())
+                .profileImage(request.profileImage())
                 .phone(request.phone())
                 .role(User.Role.USER)
                 .build();
@@ -77,5 +76,56 @@ public class UserService {
     public User getCurrentUser(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+    }
+
+    // 닉네임 중복 확인
+    @Transactional(readOnly = true)
+    public CheckNicknameResponse checkNicknameAvailability(CheckNicknameRequest request) {
+        boolean isAvailable = !userRepository.existsByNickname(request.nickname());
+        String message = isAvailable ? "사용 가능한 닉네임입니다." : "이미 사용 중인 닉네임입니다.";
+        return new CheckNicknameResponse(isAvailable, message);
+    }
+
+    // 닉네임 변경
+    public User updateNickname(String userEmail, UpdateNicknameRequest request) {
+        User user = getCurrentUser(userEmail);
+
+        // 현재 닉네임과 동일한지 확인
+        if (user.getNickname().equals(request.nickname())) {
+            throw new IllegalArgumentException("현재 닉네임과 동일합니다.");
+        }
+
+        // 닉네임 중복 확인
+        if (userRepository.existsByNickname(request.nickname())) {
+            throw new NicknameAlreadyExistsException("이미 사용 중인 닉네임입니다.");
+        }
+
+        user.setNickname(request.nickname());
+        return userRepository.save(user);
+    }
+
+    // 비밀번호 변경
+    public void updatePassword(String userEmail, UpdatePasswordRequest request) {
+        User user = getCurrentUser(userEmail);
+
+        // 현재 비밀번호 확인
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        // 새 비밀번호가 현재 비밀번호와 같은지 확인
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("새 비밀번호는 현재 비밀번호와 달라야 합니다.");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+    }
+
+    // 프로필 이미지 변경
+    public User updateProfileImage(String userEmail, UpdateProfileImageRequest request) {
+        User user = getCurrentUser(userEmail);
+        user.setProfileImage(request.profileImage());
+        return userRepository.save(user);
     }
 }

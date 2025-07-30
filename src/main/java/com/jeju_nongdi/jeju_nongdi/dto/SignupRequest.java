@@ -26,6 +26,9 @@ public record SignupRequest (
         @NotBlank(message = "닉네임은 필수입니다")
         @Size(min = 2, max = 20, message = "닉네임은 2자 이상 20자 이하여야 합니다")
         String nickname,
+
+        @Schema(description = "프로필 이미지 URL 첨부", example = "http://abcdef.com")
+        String profileImage,
         
         @Schema(description = "전화번호 (010으로 시작하는 11자리)", example = "01012345678")
         @NotBlank(message = "전화번호는 필수입니다")

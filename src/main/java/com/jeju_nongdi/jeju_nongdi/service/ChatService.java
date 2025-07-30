@@ -1,22 +1,34 @@
 package com.jeju_nongdi.jeju_nongdi.service;
 
 import com.jeju_nongdi.jeju_nongdi.dto.*;
+import com.jeju_nongdi.jeju_nongdi.dto.Chat.ChatRoomDto;
+import com.jeju_nongdi.jeju_nongdi.dto.Chat.ChatRoomView;
+import com.jeju_nongdi.jeju_nongdi.dto.Chat.MessageDto;
 import com.jeju_nongdi.jeju_nongdi.entity.*;
+import com.jeju_nongdi.jeju_nongdi.entity.Chat.ChatRoom;
+import com.jeju_nongdi.jeju_nongdi.entity.Chat.Message;
 import com.jeju_nongdi.jeju_nongdi.repository.*;
+import com.jeju_nongdi.jeju_nongdi.repository.Chat.ChatRoomRepository;
+import com.jeju_nongdi.jeju_nongdi.repository.Chat.MessageRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.time.LocalDateTime;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.HtmlUtils;
 
-import java.util.List;
-import java.util.UUID;
+import java.security.Principal;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -25,390 +37,327 @@ import java.util.stream.Collectors;
 @Transactional
 public class ChatService {
 
+    private final MessageRepository messageRepository;
     private final ChatRoomRepository chatRoomRepository;
-    private final ChatMessageRepository chatMessageRepository;
+    private final SimpMessageSendingOperations messagingTemplate;
     private final UserRepository userRepository;
-    private final MentoringRepository mentoringRepository;
-    private final IdleFarmlandRepository idleFarmlandRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
 
     /**
-     * 채팅방 생성 또는 기존 채팅방 반환
+     * 1:1 채팅방 조회 또는 생성
+     * 
+     * @param currentUserEmail 현재 사용자 이메일
+     * @param otherUserEmail 상대방 이메일
+     * @return 채팅방 정보
      */
-    public ChatRoomResponse createOrGetChatRoom(ChatRoomCreateRequest request, UserDetails userDetails) {
-        log.info("Creating or getting chat room for type: {}, referenceId: {}", 
-                request.getChatType(), request.getReferenceId());
+    public ChatRoomDto findOrCreate1to1ChatRoom(String currentUserEmail, String otherUserEmail) {
+        log.debug("1:1 채팅방 조회/생성: 현재사용자={}, 상대방={}", currentUserEmail, otherUserEmail);
+        
+        // 입력값 검증
+        if (!StringUtils.hasText(currentUserEmail) || !StringUtils.hasText(otherUserEmail)) {
+            throw new IllegalArgumentException("사용자 이메일이 유효하지 않습니다");
+        }
+        
+        if (currentUserEmail.equals(otherUserEmail)) {
+            throw new IllegalArgumentException("자기 자신과는 채팅할 수 없습니다");
+        }
 
-        User creator = getUserByEmail(userDetails.getUsername());
-        User participant = userRepository.findById(request.getParticipantId())
-                .orElseThrow(() -> new EntityNotFoundException("참여자를 찾을 수 없습니다."));
+        Long currentUserId = userRepository.findIdByEmail(currentUserEmail)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + currentUserEmail));
+        Long otherUserId = userRepository.findIdByEmail(otherUserEmail)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + otherUserEmail));
 
-        // 기존 채팅방 확인
-        return chatRoomRepository.findExistingChatRoom(
-                request.getChatType(), request.getReferenceId(), creator, participant)
-                .map(existingRoom -> {
-                    log.info("Found existing chat room: {}", existingRoom.getRoomId());
-                    return ChatRoomResponse.from(existingRoom, creator);
+        String baseId = ChatRoom.generateBaseRoomId(currentUserId, otherUserId);
+
+        ChatRoom room = chatRoomRepository.findById(baseId)
+                .map(existing -> {
+                    // 삭제된 채팅방을 다시 활성화
+                    if (existing.getDeletedByUsers().remove(currentUserEmail)) {
+                        chatRoomRepository.save(existing);
+                        log.debug("삭제된 채팅방 재활성화: roomId={}, user={}", baseId, currentUserEmail);
+                    }
+                    return existing;
                 })
                 .orElseGet(() -> {
                     // 새 채팅방 생성
-                    ChatRoom newRoom = createNewChatRoom(request, creator, participant);
-                    
-                    // 첫 메시지가 있으면 전송
-                    if (request.getInitialMessage() != null && !request.getInitialMessage().trim().isEmpty()) {
-                        sendMessage(newRoom.getRoomId(), 
-                                new ChatMessageRequest(request.getInitialMessage(), ChatMessage.MessageType.CHAT), 
-                                userDetails);
-                    }
-                    
-                    return ChatRoomResponse.from(newRoom, creator);
+                    ChatRoom newRoom = ChatRoom.builder()
+                            .roomId(baseId)
+                            .user1Id(Math.min(currentUserId, otherUserId))
+                            .user2Id(Math.max(currentUserId, otherUserId))
+                            .build();
+                    ChatRoom saved = chatRoomRepository.save(newRoom);
+                    log.debug("새 채팅방 생성: roomId={}", baseId);
+                    return saved;
+                });
+
+        Long otherId = room.getUser1Id().equals(currentUserId)
+                ? room.getUser2Id()
+                : room.getUser1Id();
+        User other = userRepository.findById(otherId)
+                .orElseThrow(() -> new IllegalArgumentException("상대 사용자를 찾을 수 없습니다: " + otherId));
+
+        return ChatRoomDto.builder()
+                .roomId(room.getRoomId())
+                .user1Id(room.getUser1Id())
+                .user2Id(room.getUser2Id())
+                .createdAt(room.getCreatedAt())
+                .otherUserNickname(other.getNickname())
+                .otherUserProfileImage(other.getProfileImage())
+                .build();
+    }
+
+    /**
+     * 사용자의 모든 채팅방 조회
+     * 
+     * @param currentUserEmail 현재 사용자 이메일
+     * @return 채팅방 목록 (마지막 메시지 포함)
+     */
+    @Transactional(readOnly = true)
+    public List<ChatRoomView> getUserChatRooms(String currentUserEmail) {
+        log.debug("사용자 채팅방 목록 조회: user={}", currentUserEmail);
+        
+        Long userId = userRepository.findIdByEmail(currentUserEmail)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + currentUserEmail));
+
+        return chatRoomRepository.findByUser1IdOrUser2Id(userId, userId).stream()
+                .filter(room -> !room.getDeletedByUsers().contains(currentUserEmail))
+                .map(room -> {
+                    Long otherId = room.getUser1Id().equals(userId)
+                            ? room.getUser2Id()
+                            : room.getUser1Id();
+                    User other = userRepository.findById(otherId)
+                            .orElseThrow(() -> new IllegalArgumentException("상대 사용자를 찾을 수 없습니다: " + otherId));
+                    Optional<Message> lastMsg = messageRepository.findTopByRoomIdOrderByCreatedAtDesc(room.getRoomId());
+                    return new ChatRoomView(
+                            room.getRoomId(),
+                            room.getUser1Id(),
+                            room.getUser2Id(),
+                            room.getCreatedAt(),
+                            lastMsg.map(Message::getContent).orElse(null),
+                            lastMsg.map(Message::getCreatedAt).orElse(null),
+                            other.getNickname(),
+                            other.getProfileImage()
+                    );
+                })
+                .sorted((a, b) -> {
+                    // 마지막 메시지 시간으로 정렬 (최신순)
+                    LocalDateTime timeA = a.getLastMessageTime() != null ? a.getLastMessageTime() : a.getCreatedAt();
+                    LocalDateTime timeB = b.getLastMessageTime() != null ? b.getLastMessageTime() : b.getCreatedAt();
+                    return timeB.compareTo(timeA);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 메시지 저장 및 실시간 브로드캐스트
+     * 
+     * @param roomId 채팅방 ID
+     * @param senderEmail 발신자 이메일
+     * @param content 메시지 내용
+     */
+    @Transactional
+    public void saveAndBroadcastMessage(String roomId, String senderEmail, String content) {
+        log.debug("메시지 저장 및 브로드캐스트: roomId={}, sender={}", roomId, senderEmail);
+        
+        // 입력값 검증
+        if (!StringUtils.hasText(roomId) || !StringUtils.hasText(senderEmail) || !StringUtils.hasText(content)) {
+            throw new IllegalArgumentException("필수 파라미터가 누락되었습니다");
+        }
+        
+        // 메시지 길이 제한
+        if (content.length() > 1000) {
+            throw new IllegalArgumentException("메시지는 1000자를 초과할 수 없습니다");
+        }
+
+        User sender = userRepository.findByEmail(senderEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + senderEmail));
+
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다: " + roomId));
+
+        // 채팅방 참여자 권한 확인
+        if (!Objects.equals(sender.getId(), room.getUser1Id()) && 
+            !Objects.equals(sender.getId(), room.getUser2Id())) {
+            throw new SecurityException("채팅방 참여 권한이 없습니다");
+        }
+
+        Long receiverId = room.getUser1Id().equals(sender.getId())
+                ? room.getUser2Id()
+                : room.getUser1Id();
+
+        // XSS 방지를 위한 HTML 이스케이프 (이미 처리되었지만 추가 보안)
+        String sanitizedContent = HtmlUtils.htmlEscape(content.trim());
+
+        Message saved = messageRepository.save(Message.builder()
+                .roomId(roomId)
+                .senderId(sender.getId())
+                .receiverId(receiverId)
+                .content(sanitizedContent)
+                .build());
+
+        MessageDto dto = MessageDto.builder()
+                .id(saved.getId())
+                .roomId(saved.getRoomId())
+                .senderId(saved.getSenderId())
+                .receiverId(saved.getReceiverId())
+                .content(saved.getContent())
+                .createdAt(saved.getCreatedAt())
+                .senderNickname(sender.getNickname())
+                .senderProfileImage(sender.getProfileImage())
+                .build();
+
+        // 실시간 메시지 브로드캐스트
+        messagingTemplate.convertAndSend("/topic/chat/room/" + roomId, dto);
+
+        // 수신자에게 알림 생성
+        try {
+            String receiverEmail = userRepository.findEmailById(receiverId)
+                    .orElseThrow(() -> new IllegalArgumentException("수신자 이메일을 찾을 수 없습니다: " + receiverId));
+
+            notificationService.createChatNotification(
+                    receiverEmail,
+                    sender.getNickname() + " – " + (sanitizedContent.length() > 30 ? 
+                        sanitizedContent.substring(0, 30) + "..." : sanitizedContent),
+                    roomId,
+                    sender.getNickname()
+            );
+        } catch (Exception e) {
+            log.warn("알림 생성 실패: {}", e.getMessage());
+            // 알림 실패가 메시지 전송을 방해하지 않도록 함
+        }
+        
+        log.debug("메시지 저장 완료: messageId={}", saved.getId());
+    }
+
+    /**
+     * 채팅방 메시지 조회 (페이징)
+     * 
+     * @param roomId 채팅방 ID
+     * @param currentUserEmail 현재 사용자 이메일
+     * @param pageable 페이징 정보
+     * @return 페이징된 메시지 목록
+     */
+    @Transactional(readOnly = true)
+    public Page<MessageDto> getMessagesByRoomWithPaging(String roomId, String currentUserEmail, Pageable pageable) {
+        log.debug("채팅방 메시지 페이징 조회: roomId={}, user={}, page={}, size={}", 
+            roomId, currentUserEmail, pageable.getPageNumber(), pageable.getPageSize());
+        
+        Long userId = userRepository.findIdByEmail(currentUserEmail)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + currentUserEmail));
+
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다: " + roomId));
+
+        // 채팅방 참여 권한 확인
+        if (!Objects.equals(userId, room.getUser1Id()) && !Objects.equals(userId, room.getUser2Id())) {
+            throw new SecurityException("접근 거부: 참여자가 아닙니다");
+        }
+        
+        // 삭제된 채팅방인지 확인
+        if (room.getDeletedByUsers().contains(currentUserEmail)) {
+            log.debug("삭제된 채팅방 메시지 조회: roomId={}, user={}", roomId, currentUserEmail);
+            return Page.empty(pageable);
+        }
+
+        return messageRepository.findByRoomIdOrderByCreatedAtDesc(roomId, pageable)
+                .map(msg -> {
+                    User sender = userRepository.findById(msg.getSenderId())
+                            .orElseThrow(() -> new IllegalArgumentException("보낸 사용자를 찾을 수 없습니다: " + msg.getSenderId()));
+                    return MessageDto.builder()
+                            .id(msg.getId())
+                            .roomId(msg.getRoomId())
+                            .senderId(msg.getSenderId())
+                            .receiverId(msg.getReceiverId())
+                            .content(msg.getContent())
+                            .createdAt(msg.getCreatedAt())
+                            .senderNickname(sender.getNickname())
+                            .senderProfileImage(sender.getProfileImage())
+                            .build();
                 });
     }
 
     /**
-     * 새 채팅방 생성
-     */
-    private ChatRoom createNewChatRoom(ChatRoomCreateRequest request, User creator, User participant) {
-        String roomId = UUID.randomUUID().toString();
-        String title = generateChatRoomTitle(request.getChatType(), request.getReferenceId());
-
-        ChatRoom chatRoom = ChatRoom.builder()
-                .roomId(roomId)
-                .title(title)
-                .chatType(request.getChatType())
-                .referenceId(request.getReferenceId())
-                .creator(creator)
-                .participant(participant)
-                .build();
-
-        ChatRoom savedRoom = chatRoomRepository.save(chatRoom);
-        log.info("Created new chat room: {}", savedRoom.getRoomId());
-
-        return savedRoom;
-    }
-
-    /**
-     * 채팅방 제목 생성
-     */
-    private String generateChatRoomTitle(ChatRoom.ChatType chatType, Long referenceId) {
-        switch (chatType) {
-            case MENTORING:
-                return mentoringRepository.findById(referenceId)
-                        .map(m -> "멘토링: " + m.getTitle())
-                        .orElse("멘토링 상담");
-            case FARMLAND:
-                return idleFarmlandRepository.findById(referenceId)
-                        .map(f -> "농지문의: " + f.getTitle())
-                        .orElse("농지 문의");
-            case JOB_POSTING:
-                return "일자리 문의";
-            default:
-                return "채팅방";
-        }
-    }
-
-    /**
-     * 메시지 전송
-     */
-    public ChatMessageResponse sendMessage(String roomId, ChatMessageRequest request, UserDetails userDetails) {
-        log.info("Sending message to room: {}", roomId);
-
-        User sender = getUserByEmail(userDetails.getUsername());
-        ChatRoom chatRoom = getChatRoomByRoomId(roomId);
-
-        // 채팅방 참여자 확인
-        if (!chatRoom.isParticipant(sender)) {
-            throw new AccessDeniedException("채팅방에 참여할 권한이 없습니다.");
-        }
-
-        // 메시지 저장
-        ChatMessage message = ChatMessage.builder()
-                .chatRoom(chatRoom)
-                .sender(sender)
-                .content(request.getContent())
-                .messageType(request.getMessageType())
-                .build();
-
-        ChatMessage savedMessage = chatMessageRepository.save(message);
-
-        // 채팅방 마지막 메시지 업데이트
-        chatRoom.updateLastMessage(request.getContent());
-        chatRoomRepository.save(chatRoom);
-
-        // WebSocket으로 실시간 전송
-        WebSocketChatMessage wsMessage = new WebSocketChatMessage(
-                roomId,
-                sender.getName(),
-                request.getContent(),
-                request.getMessageType(),
-                savedMessage.getSentAt()
-        );
-
-        messagingTemplate.convertAndSend("/topic/chat/room/" + roomId, wsMessage);
-
-        // 상대방에게 개별 알림 전송
-        User otherParticipant = chatRoom.getOtherParticipant(sender);
-        messagingTemplate.convertAndSendToUser(
-                otherParticipant.getEmail(),
-                "/queue/notifications",
-                wsMessage
-        );
-
-        return ChatMessageResponse.from(savedMessage, sender);
-    }
-
-    /**
-     * 채팅방 목록 조회
+     * 채팅방 메시지 조회 (전체 목록)
+     * 
+     * @param roomId 채팅방 ID
+     * @param currentUserEmail 현재 사용자 이메일
+     * @return 메시지 목록
      */
     @Transactional(readOnly = true)
-    public ChatRoomListResponse getChatRooms(UserDetails userDetails) {
-        log.info("Fetching chat rooms for user: {}", userDetails.getUsername());
-
-        User user = getUserByEmail(userDetails.getUsername());
-        List<ChatRoom> chatRooms = chatRoomRepository.findByUserOrderByLastMessageTimeDesc(user);
-
-        List<ChatRoomResponse> chatRoomResponses = chatRooms.stream()
-                .map(room -> {
-                    ChatRoomResponse response = ChatRoomResponse.from(room, user);
-                    // 읽지 않은 메시지 수 설정
-                    Long unreadCount = chatMessageRepository.countUnreadMessages(room, user);
-                    response.setUnreadCount(unreadCount);
-                    return response;
-                })
-                .collect(Collectors.toList());
-
-        // 전체 읽지 않은 메시지 수
-        Long totalUnreadCount = chatMessageRepository.countUnreadMessagesByUser(user);
-
-        return ChatRoomListResponse.of(chatRoomResponses, totalUnreadCount);
-    }
-
-    /**
-     * 채팅방 메시지 목록 조회
-     */
-    @Transactional(readOnly = true)
-    public Page<ChatMessageResponse> getChatMessages(String roomId, Pageable pageable, UserDetails userDetails) {
-        log.info("Fetching messages for room: {}", roomId);
-
-        User user = getUserByEmail(userDetails.getUsername());
-        ChatRoom chatRoom = getChatRoomByRoomId(roomId);
-
-        // 채팅방 참여자 확인
-        if (!chatRoom.isParticipant(user)) {
-            throw new AccessDeniedException("채팅방에 접근할 권한이 없습니다.");
-        }
-
-        Page<ChatMessage> messages = chatMessageRepository.findByChatRoomOrderBySentAtDesc(chatRoom, pageable);
-        return messages.map(message -> ChatMessageResponse.from(message, user));
-    }
-
-    /**
-     * 채팅방 메시지 읽음 처리
-     */
-    public void markMessagesAsRead(String roomId, UserDetails userDetails) {
-        log.info("Marking messages as read for room: {}", roomId);
-
-        User user = getUserByEmail(userDetails.getUsername());
-        ChatRoom chatRoom = getChatRoomByRoomId(roomId);
-
-        // 채팅방 참여자 확인
-        if (!chatRoom.isParticipant(user)) {
-            throw new AccessDeniedException("채팅방에 접근할 권한이 없습니다.");
-        }
-
-        chatMessageRepository.markAllAsReadInChatRoom(chatRoom, user);
-    }
-
-    /**
-     * 채팅방 나가기
-     */
-    public void leaveChatRoom(String roomId, UserDetails userDetails) {
-        log.info("User leaving chat room: {}", roomId);
-
-        User user = getUserByEmail(userDetails.getUsername());
-        ChatRoom chatRoom = getChatRoomByRoomId(roomId);
-
-        // 채팅방 참여자 확인
-        if (!chatRoom.isParticipant(user)) {
-            throw new AccessDeniedException("채팅방에 접근할 권한이 없습니다.");
-        }
-
-        // 나가기 메시지 전송
-        WebSocketChatMessage leaveMessage = WebSocketChatMessage.createLeaveMessage(roomId, user.getName());
-        messagingTemplate.convertAndSend("/topic/chat/room/" + roomId, leaveMessage);
-
-        // 시스템 메시지 저장
-        ChatMessage systemMessage = ChatMessage.builder()
-                .chatRoom(chatRoom)
-                .sender(user)
-                .content(user.getName() + "님이 채팅방을 나갔습니다.")
-                .messageType(ChatMessage.MessageType.LEAVE)
-                .build();
-
-        chatMessageRepository.save(systemMessage);
-    }
-
-    /**
-     * 채팅방 입장
-     */
-    public void enterChatRoom(String roomId, UserDetails userDetails) {
-        log.info("User entering chat room: {}", roomId);
-
-        User user = getUserByEmail(userDetails.getUsername());
-        ChatRoom chatRoom = getChatRoomByRoomId(roomId);
-
-        // 채팅방 참여자 확인
-        if (!chatRoom.isParticipant(user)) {
-            throw new AccessDeniedException("채팅방에 접근할 권한이 없습니다.");
-        }
-
-        // 입장 메시지 전송
-        WebSocketChatMessage enterMessage = WebSocketChatMessage.createEnterMessage(roomId, user.getName());
-        messagingTemplate.convertAndSend("/topic/chat/room/" + roomId, enterMessage);
-
-        // 읽지 않은 메시지 읽음 처리
-        markMessagesAsRead(roomId, userDetails);
-    }
-
-    /**
-     * 읽지 않은 메시지 총 개수 조회
-     */
-    @Transactional(readOnly = true)
-    public Long getUnreadMessageCount(UserDetails userDetails) {
-        User user = getUserByEmail(userDetails.getUsername());
-        return chatMessageRepository.countUnreadMessagesByUser(user);
-    }
-
-    /**
-     * 파일과 함께 메시지 전송
-     */
-    public ChatMessageResponse sendMessageWithFile(String roomId, ChatMessageRequest request, 
-                                                  MultipartFile file, UserDetails userDetails) {
-        log.info("Sending message with file to room: {}", roomId);
-
-        User sender = getUserByEmail(userDetails.getUsername());
-        ChatRoom chatRoom = getChatRoomByRoomId(roomId);
-
-        // 채팅방 참여자 확인
-        if (!chatRoom.isParticipant(sender)) {
-            throw new AccessDeniedException("채팅방에 참여할 권한이 없습니다.");
-        }
-
-        String content = request.getContent();
-        ChatMessage.MessageType messageType = request.getMessageType();
-
-        // 파일이 있는 경우 파일 정보를 메시지에 추가
-        if (file != null && !file.isEmpty()) {
-            try {
-                // 파일 저장 로직 (실제 구현 시 파일 저장 서비스 사용)
-                String fileName = file.getOriginalFilename();
-                String fileSize = formatFileSize(file.getSize());
-                
-                // 파일 정보를 메시지에 포함
-                content = String.format("[파일] %s (%s)%s%s", 
-                    fileName, fileSize, 
-                    content != null && !content.trim().isEmpty() ? "\n" + content : "",
-                    content != null && !content.trim().isEmpty() ? "" : ""
-                );
-                
-                messageType = ChatMessage.MessageType.CHAT; // 파일 메시지도 일반 채팅으로 처리
-                
-            } catch (Exception e) {
-                log.error("File processing error: {}", e.getMessage());
-                throw new RuntimeException("파일 처리 중 오류가 발생했습니다.");
-            }
-        }
-
-        // 메시지 저장
-        ChatMessage message = ChatMessage.builder()
-                .chatRoom(chatRoom)
-                .sender(sender)
-                .content(content)
-                .messageType(messageType)
-                .build();
-
-        ChatMessage savedMessage = chatMessageRepository.save(message);
-
-        // 채팅방 마지막 메시지 업데이트
-        chatRoom.updateLastMessage(content);
-        chatRoomRepository.save(chatRoom);
-
-        // WebSocket으로 실시간 전송
-        WebSocketChatMessage wsMessage = new WebSocketChatMessage(
-                roomId,
-                sender.getName(),
-                content,
-                messageType,
-                savedMessage.getSentAt()
-        );
-
-        messagingTemplate.convertAndSend("/topic/chat/room/" + roomId, wsMessage);
-
-        // 상대방에게 개별 알림 전송
-        User otherParticipant = chatRoom.getOtherParticipant(sender);
-        messagingTemplate.convertAndSendToUser(
-                otherParticipant.getEmail(),
-                "/queue/notifications",
-                wsMessage
-        );
-
-        return ChatMessageResponse.from(savedMessage, sender);
-    }
-
-    /**
-     * 특정 타입의 채팅방 목록 조회
-     */
-    @Transactional(readOnly = true)
-    public List<ChatRoomResponse> getChatRoomsByType(ChatRoom.ChatType chatType, UserDetails userDetails) {
-        User user = getUserByEmail(userDetails.getUsername());
+    public List<MessageDto> getMessagesByRoom(String roomId, String currentUserEmail) {
+        log.debug("채팅방 메시지 조회: roomId={}, user={}", roomId, currentUserEmail);
         
-        List<ChatRoom> chatRooms = chatRoomRepository.findByUserOrderByLastMessageTimeDesc(user)
-                .stream()
-                .filter(room -> room.getChatType() == chatType)
-                .collect(Collectors.toList());
+        Long userId = userRepository.findIdByEmail(currentUserEmail)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + currentUserEmail));
 
-        return chatRooms.stream()
-                .map(room -> ChatRoomResponse.from(room, user))
-                .collect(Collectors.toList());
-    }
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다: " + roomId));
 
-    /**
-     * 채팅방 검색
-     */
-    @Transactional(readOnly = true)
-    public List<ChatRoomResponse> searchChatRooms(String keyword, UserDetails userDetails) {
-        User user = getUserByEmail(userDetails.getUsername());
+        // 채팅방 참여 권한 확인
+        if (!Objects.equals(userId, room.getUser1Id()) && !Objects.equals(userId, room.getUser2Id())) {
+            throw new SecurityException("접근 거부: 참여자가 아닙니다");
+        }
         
-        List<ChatRoom> chatRooms = chatRoomRepository.findByUserOrderByLastMessageTimeDesc(user)
-                .stream()
-                .filter(room -> room.getTitle().toLowerCase().contains(keyword.toLowerCase()) ||
-                               (room.getLastMessage() != null && 
-                                room.getLastMessage().toLowerCase().contains(keyword.toLowerCase())))
-                .collect(Collectors.toList());
+        // 삭제된 채팅방인지 확인
+        if (room.getDeletedByUsers().contains(currentUserEmail)) {
+            log.debug("삭제된 채팅방 메시지 조회: roomId={}, user={}", roomId, currentUserEmail);
+            return Collections.emptyList();
+        }
 
-        return chatRooms.stream()
-                .map(room -> ChatRoomResponse.from(room, user))
-                .collect(Collectors.toList());
+        return messageRepository.findByRoomIdOrderByCreatedAtAsc(roomId).stream()
+                .map(msg -> {
+                    User sender = userRepository.findById(msg.getSenderId())
+                            .orElseThrow(() -> new IllegalArgumentException("보낸 사용자를 찾을 수 없습니다: " + msg.getSenderId()));
+                    return MessageDto.builder()
+                            .id(msg.getId())
+                            .roomId(msg.getRoomId())
+                            .senderId(msg.getSenderId())
+                            .receiverId(msg.getReceiverId())
+                            .content(msg.getContent())
+                            .createdAt(msg.getCreatedAt())
+                            .senderNickname(sender.getNickname())
+                            .senderProfileImage(sender.getProfileImage())
+                            .build();
+                }).collect(Collectors.toList());
     }
 
     /**
-     * 파일 크기 포맷팅
+     * 채팅방 소프트 삭제
+     * 양쪽 사용자가 모두 삭제하면 완전 삭제됨
+     * 
+     * @param roomId 채팅방 ID
+     * @param currentUserEmail 현재 사용자 이메일
      */
-    private String formatFileSize(long bytes) {
-        if (bytes < 1024) return bytes + " B";
-        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
-        if (bytes < 1024 * 1024 * 1024) return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
-        return String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
-    }
+    @Transactional
+    public void softDeleteRoom(String roomId, String currentUserEmail) {
+        log.debug("채팅방 소프트 삭제: roomId={}, user={}", roomId, currentUserEmail);
+        
+        Long userId = userRepository.findIdByEmail(currentUserEmail)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + currentUserEmail));
 
-    // Private helper methods
-    private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다: " + email));
-    }
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다: " + roomId));
 
-    private ChatRoom getChatRoomByRoomId(String roomId) {
-        return chatRoomRepository.findByRoomId(roomId)
-                .orElseThrow(() -> new EntityNotFoundException("채팅방을 찾을 수 없습니다: " + roomId));
+        // 삭제 권한 확인
+        if (!Objects.equals(userId, room.getUser1Id()) && !Objects.equals(userId, room.getUser2Id())) {
+            throw new SecurityException("삭제 권한이 없습니다");
+        }
+        
+        // 삭제 처리
+        room.getDeletedByUsers().add(currentUserEmail);
+        chatRoomRepository.save(room);
+
+        // 양쪽 사용자가 모두 삭제했는지 확인
+        String user1Email = userRepository.findEmailById(room.getUser1Id()).orElse(null);
+        String user2Email = userRepository.findEmailById(room.getUser2Id()).orElse(null);
+        
+        if (user1Email != null && user2Email != null
+                && room.getDeletedByUsers().contains(user1Email)
+                && room.getDeletedByUsers().contains(user2Email)) {
+            // 완전 삭제
+            messageRepository.deleteAllByRoomId(roomId);
+            chatRoomRepository.delete(room);
+            log.debug("채팅방 완전 삭제: roomId={}", roomId);
+        }
     }
 }
