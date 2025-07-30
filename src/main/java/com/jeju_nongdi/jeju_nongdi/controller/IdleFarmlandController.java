@@ -134,9 +134,7 @@ public class IdleFarmlandController {
         log.info("Deleting idle farmland with ID: {}", id);
         idleFarmlandService.deleteIdleFarmland(id, userDetails);
         
-        com.jeju_nongdi.jeju_nongdi.dto.ApiResponse<Void> response = 
-                new com.jeju_nongdi.jeju_nongdi.dto.ApiResponse<>(true, "농지가 성공적으로 삭제되었습니다.", null);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(com.jeju_nongdi.jeju_nongdi.dto.ApiResponse.success("농지가 성공적으로 삭제되었습니다.", (Void) null));
     }
 
     @PatchMapping("/{id}/status")
