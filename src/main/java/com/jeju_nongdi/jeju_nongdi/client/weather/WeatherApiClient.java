@@ -499,25 +499,18 @@ public class WeatherApiClient {
         
         for (int i = 0; i < forecasts.size(); i++) {
             DailyWeather day = forecasts.get(i);
-            
-            if (day.getMaxTemp() != null && day.getMaxTemp() >= 30) {
-                if (consecutiveHotDays == 0) {
-                    startDay = i;
-                }
-                consecutiveHotDays++;
-            } else {
-                if (consecutiveHotDays >= 3) {
-                    String dayLabel = forecasts.get(startDay).getDayLabel();
-                    
-                    List<String> actions = Arrays.asList(
+            if (consecutiveHotDays >= 3) {
+                String dayLabel = forecasts.get(startDay).getDayLabel();
+
+                List<String> actions = Arrays.asList(
                         "🌡️ 차광막 및 그늘막 설치 점검",
-                        "💧 자동 급수 시설 정상 작동 확인", 
+                        "💧 자동 급수 시설 정상 작동 확인",
                         "⏰ 작업 시간을 오전 7시 이전, 오후 6시 이후로 조정",
                         "🧴 작업자 수분 보충용품 준비",
                         "🏠 실내 작업 위주로 계획 변경"
-                    );
-                    
-                    alerts.add(new WeatherAlert(
+                );
+
+                alerts.add(new WeatherAlert(
                         "HEATWAVE",
                         String.format("🔥 %s부터 %d일간 연속 폭염 예상!", dayLabel, consecutiveHotDays),
                         String.format("최고기온 %.1f°C 이상이 %d일간 지속됩니다",
@@ -525,8 +518,15 @@ public class WeatherApiClient {
                         forecasts.get(startDay).getDate(),
                         consecutiveHotDays,
                         actions
-                    ));
+                ));
+            }
+
+            if (day.getMaxTemp() != null && day.getMaxTemp() >= 30) {
+                if (consecutiveHotDays == 0) {
+                    startDay = i;
                 }
+                consecutiveHotDays++;
+            } else {
                 consecutiveHotDays = 0;
             }
         }
