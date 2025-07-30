@@ -37,6 +37,9 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true)
     private String nickname;
 
+    @Column(name = "profileImage")
+    private String profileImage;
+
     @Column(nullable = false)
     private String phone;
 
