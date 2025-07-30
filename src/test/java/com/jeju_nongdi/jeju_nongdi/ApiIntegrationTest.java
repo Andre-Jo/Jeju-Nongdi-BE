@@ -3,7 +3,6 @@ package com.jeju_nongdi.jeju_nongdi;
 import com.jeju_nongdi.jeju_nongdi.client.price.PriceApiClient;
 import com.jeju_nongdi.jeju_nongdi.client.price.PriceInfo;
 import com.jeju_nongdi.jeju_nongdi.client.weather.WeatherApiClient;
-import com.jeju_nongdi.jeju_nongdi.client.weather.WeatherInfo;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,16 +22,32 @@ public class ApiIntegrationTest {
 
     @Test
     public void testWeatherApiIntegration() {
-        System.out.println("=== 기상청 API 연동 테스트 시작 ===");
+        System.out.println("=== 4일 기상 예보 API 연동 테스트 시작 ===");
         
-        WeatherInfo weather = weatherApiClient.getJejuWeatherForecast().block();
+        var forecast = weatherApiClient.get4DaysForecast(33.4996, 126.5312).block();
         
-        assertThat(weather).isNotNull();
-        assertThat(weather.getTemperature()).isNotNull();
-        assertThat(weather.getHumidity()).isNotNull();
+        assertThat(forecast).isNotNull();
+        assertThat(forecast.getDailyForecasts()).isNotEmpty();
+        assertThat(forecast.getAlerts()).isNotNull();
         
-        System.out.println("기상청 API 테스트 결과: " + weather.getFormattedSummary());
-        System.out.println("=== 기상청 API 연동 테스트 완료 ===");
+        System.out.println("4일 예보 테스트 결과: " + forecast.getDailyForecasts().size() + "일 데이터, " + 
+                          forecast.getAlerts().size() + "개 경보");
+        System.out.println("=== 4일 기상 예보 API 연동 테스트 완료 ===");
+    }
+
+    @Test
+    public void testAiAgricultureTip() {
+        System.out.println("=== AI 농업 팁 API 연동 테스트 시작 ===");
+        
+        var tip = weatherApiClient.generateAgricultureTip(33.4996, 126.5312).block();
+        
+        assertThat(tip).isNotNull();
+        assertThat(tip.getMainMessage()).isNotNull();
+        assertThat(tip.getAlerts()).isNotNull();
+        assertThat(tip.getPreparationActions()).isNotNull();
+        
+        System.out.println("AI 농업 팁 테스트 결과: " + tip.getMainMessage());
+        System.out.println("=== AI 농업 팁 API 연동 테스트 완료 ===");
     }
 
     @Test
