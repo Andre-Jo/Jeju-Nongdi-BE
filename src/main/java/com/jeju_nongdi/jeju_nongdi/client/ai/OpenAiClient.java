@@ -1,7 +1,6 @@
 package com.jeju_nongdi.jeju_nongdi.client.ai;
 
 import com.jeju_nongdi.jeju_nongdi.client.price.PriceInfo;
-import com.jeju_nongdi.jeju_nongdi.client.weather.WeatherInfo;
 import com.jeju_nongdi.jeju_nongdi.entity.UserPreference;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -11,14 +10,6 @@ import java.util.List;
 @Component
 @Slf4j
 public class OpenAiClient {
-    
-    /**
-     * 날씨 기반 농업 조언 생성 (규칙 기반)
-     */
-    public String generateWeatherBasedAdvice(WeatherInfo weather, UserPreference userPreference) {
-        log.info("규칙 기반 날씨 조언 생성: {}", weather.getSkyCondition());
-        return generateFallbackWeatherAdvice(weather);
-    }
     
     /**
      * 작물별 생육 단계 가이드 생성 (규칙 기반)
@@ -48,31 +39,6 @@ public class OpenAiClient {
                "- 계절에 맞는 적절한 관리\n" +
                "- 지역 농업기술센터와의 상담 활용\n\n" +
                "추가 상세한 정보가 필요하시면 제주농업기술센터(064-760-7000)로 문의하세요.";
-    }
-    
-    /**
-     * 날씨 기반 농업 조언 생성 (폴백 메서드)
-     */
-    private String generateFallbackWeatherAdvice(WeatherInfo weather) {
-        StringBuilder advice = new StringBuilder();
-        advice.append("🌡️ 오늘의 날씨 요약\n");
-        advice.append(weather.getFormattedSummary()).append("\n\n");
-        
-        advice.append("⚠️ 주의사항\n");
-        if (weather.isHighTemperature()) {
-            advice.append("- 고온 주의: 한낮 야외 작업을 피하세요\n");
-        }
-        if (weather.isRainExpected()) {
-            advice.append("- 강수 예상: 실내 작업을 계획하세요\n");
-        }
-        
-        advice.append("\n✅ 권장 작업\n");
-        if (weather.isGoodForFarmWork()) {
-            advice.append("- 농업 작업에 적합한 날씨입니다\n");
-            advice.append("- 일반적인 농장 관리 작업을 진행하세요\n");
-        }
-        
-        return advice.toString();
     }
     
     /**
