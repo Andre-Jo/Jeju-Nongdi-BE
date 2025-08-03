@@ -68,14 +68,14 @@ public class ChatWebSocketController {
             // 메시지 저장 및 브로드캐스트
             chatService.saveAndBroadcastMessage(
                 payload.getRoomId(),
-                user.getEmail(),
+                payload.getEmail(),
                 sanitizedContent
             );
             
-            log.debug("메시지 전송 성공: 사용자={}, 채팅방={}", user.getEmail(), payload.getRoomId());
+            log.debug("메시지 전송 성공: 사용자={}, 채팅방={}", payload.getEmail(), payload.getRoomId());
         } catch (Exception e) {
-            log.error("메시지 전송 실패: 사용자={}, 채팅방={}, 오류={}", 
-                user.getEmail(), payload.getRoomId(), e.getMessage(), e);
+            log.error("메시지 전송 실패: 사용자={}, 채팅방={}, 오류={}",
+                    payload.getEmail(), payload.getRoomId(), e.getMessage(), e);
         }
     }
 }

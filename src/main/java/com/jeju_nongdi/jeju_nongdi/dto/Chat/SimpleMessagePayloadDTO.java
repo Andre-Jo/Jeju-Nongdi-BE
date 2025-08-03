@@ -19,4 +19,7 @@ public class SimpleMessagePayloadDTO {
     @Size(max = 1000, message = "메시지는 1000자를 초과할 수 없습니다")
     @Schema(description = "메시지 내용", example = "안녕하세요!", required = true)
     private String content;
+
+    @Schema(description = "보낸 사람의 ID", example = "1")
+    private String email; // 보낸 사람의 ID, 필요시 추가
 }
