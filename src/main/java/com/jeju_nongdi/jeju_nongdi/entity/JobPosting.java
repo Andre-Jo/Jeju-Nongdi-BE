@@ -92,7 +92,7 @@ public class JobPosting {
         updatedAt = LocalDateTime.now();
     }
 
-    public enum CropType {
+        public enum CropType {
         POTATO("감자"),
         BARLEY("보리"),
         CABBAGE("양배추"),

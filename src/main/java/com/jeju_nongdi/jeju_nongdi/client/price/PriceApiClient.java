@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -33,34 +34,54 @@ public class PriceApiClient {
      * 특정 작물의 현재 가격 정보 조회 (실제 KAMIS API 호출)
      */
     public Mono<PriceInfo> getCropPrice(String cropName) {
+        // cropName이 null이거나 빈 문자열인 경우 기본값 사용
+        String safeCropName = (cropName != null && !cropName.trim().isEmpty()) ? cropName.trim() : "감귤";
+        
         String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         
         WebClient webClient = webClientBuilder
                 .baseUrl(priceApiUrl)
                 .build();
         
-        log.info("KAMIS API 호출 시작 - 작물: {}, 날짜: {}", cropName, currentDate);
+        log.info("KAMIS API 호출 시작 - 작물: {}, 날짜: {}", safeCropName, currentDate);
         
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/price/item.do")
-                        .queryParam("action", "dailyPriceByCategoryList")
+                        .path("/price/xml.do")
+                        .queryParam("action", "ItemInfo")
                         .queryParam("p_cert_key", serviceKey)
-                        .queryParam("p_cert_id", "aT")
+                        .queryParam("p_cert_id", "5948")
                         .queryParam("p_returntype", "json")
                         .queryParam("p_product_cls_code", "01") // 농산물
-                        .queryParam("p_item_category_code", "100") // 채소류
-                        .queryParam("p_country_code", "1101") // 국내
+                        .queryParam("p_itemcategorycode", "400") // 채소류
+                        .queryParam("p_itemcode", "415") // 제주도 작물(현재 감귤) 추후 작물 입력하여 맵핑 필요
+                        .queryParam("p_countycode", "3911") // 제주
                         .queryParam("p_regday", currentDate)
                         .queryParam("p_convert_kg_yn", "Y") // kg 단위 변환
                         .build())
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                        response -> {
+                    //url정보
+                            log.warn("KAMIS API HTTP 오류 - 작물: {}, 상태: {}", safeCropName, response.statusCode());
+                            return Mono.error(new RuntimeException("KAMIS API HTTP 오류: " + response.statusCode()));
+                        })
                 .bodyToMono(String.class)
-                .doOnNext(response -> log.debug("KAMIS API 응답 수신: {} bytes", response.length()))
-                .map(response -> parsePriceResponse(response, cropName))
-                .doOnError(error -> log.error("KAMIS API 호출 실패 - {}: {}", cropName, error.getMessage()))
-                .onErrorReturn(createRealisticPriceInfo(cropName));
+                .timeout(Duration.ofSeconds(10))
+                .doOnNext(response -> {
+                    if (response != null && response.trim().startsWith("<")) {
+                        log.warn("KAMIS API HTML 응답 수신 (403 가능성) - 작물: {}, 응답 시작: {}", 
+                                safeCropName, response.substring(0, Math.min(100, response.length())));
+                        throw new RuntimeException("HTML 응답 수신 - API 제한 가능성");
+                    }
+                    log.debug("KAMIS API JSON 응답 수신: {} bytes", response.length());
+                })
+                .map(response -> parsePriceResponse(response, safeCropName))
+                .doOnSuccess(priceInfo -> log.info("KAMIS API 처리 완료 - 작물: {}, 가격: {}", 
+                        safeCropName, priceInfo != null ? priceInfo.getFormattedPrice() : "null"))
+                .doOnError(error -> log.error("KAMIS API 호출 실패 - 작물: {}, 오류: {}", safeCropName, error.getMessage()))
+                .onErrorReturn(createRealisticPriceInfo(safeCropName)); // cache() 제거 - 에러 시 캐시 안됨
     }
     
     /**
@@ -126,30 +147,55 @@ public class PriceApiClient {
     
     private PriceInfo parsePriceResponse(String response, String cropName) {
         try {
-            log.debug("KAMIS API 응답 길이: {} bytes", response != null ? response.length() : 0);
+            if (response == null || response.trim().isEmpty()) {
+                log.warn("KAMIS API 응답이 비어있음 - 작물: {}, 폴백 데이터 사용", cropName);
+                return createRealisticPriceInfo(cropName);
+            }
+            
+            log.debug("KAMIS API 응답 파싱 시작 - 작물: {}, 응답 길이: {} bytes", cropName, response.length());
             
             // KAMIS API 응답 파싱
             JsonNode root = new ObjectMapper().readTree(response);
+            
+            // 응답 구조 확인
+            if (root == null) {
+                log.warn("KAMIS API 응답 파싱 실패 (root null) - 작물: {}, 폴백 데이터 사용", cropName);
+                return createRealisticPriceInfo(cropName);
+            }
+            
             JsonNode data = root.path("data");
             
-            if (data.isArray() && !data.isEmpty()) {
-                // 해당 작물과 가장 유사한 데이터 찾기
-                for (JsonNode item : data) {
-                    String itemName = item.path("item_name").asText();
-                    String kindName = item.path("kind_name").asText();
-                    
-                    // 작물명 매칭 (부분 일치 포함)
-                    if (isMatchingCrop(itemName, kindName, cropName)) {
-                        return parseKamisPriceData(item, cropName);
-                    }
+            if (data.isMissingNode() || !data.isArray()) {
+                log.debug("KAMIS API 응답에 data 배열 없음 - 작물: {}, 응답: {}", cropName, root.toString());
+                return createRealisticPriceInfo(cropName);
+            }
+            
+            if (data.isEmpty()) {
+                log.debug("KAMIS API 응답 data 배열이 비어있음 - 작물: {}", cropName);
+                return createRealisticPriceInfo(cropName);
+            }
+            
+            // 해당 작물과 가장 유사한 데이터 찾기
+            for (JsonNode item : data) {
+                if (item == null) continue;
+                
+                String itemName = item.path("item_name").asText("");
+                String kindName = item.path("kind_name").asText("");
+                
+                log.debug("KAMIS 데이터 확인 - 요청작물: {}, API작물명: {}, 품종명: {}", cropName, itemName, kindName);
+                
+                // 작물명 매칭 (부분 일치 포함)
+                if (isMatchingCrop(itemName, kindName, cropName)) {
+                    log.debug("KAMIS 작물 매칭 성공 - 요청: {}, 매칭: {} ({})", cropName, itemName, kindName);
+                    return parseKamisPriceData(item, cropName);
                 }
             }
             
-            log.warn("KAMIS API에서 {}에 대한 가격 정보를 찾을 수 없음, 폴백 데이터 사용", cropName);
+            log.info("KAMIS API에서 {}에 대한 가격 정보를 찾을 수 없음, 폴백 데이터 사용", cropName);
             return createRealisticPriceInfo(cropName);
             
         } catch (Exception e) {
-            log.error("KAMIS API 가격 데이터 파싱 실패: {}", e.getMessage());
+            log.error("KAMIS API 가격 데이터 파싱 실패 - 작물: {}, 오류: {}", cropName, e.getMessage(), e);
             return createRealisticPriceInfo(cropName);
         }
     }
@@ -181,25 +227,45 @@ public class PriceApiClient {
     
     private PriceInfo parseKamisPriceData(JsonNode item, String cropName) {
         try {
-            String priceStr = item.path("dpr1").asText(); // 당일가격
-            String prevPriceStr = item.path("dpr7").asText(); // 1주일전 가격
-            String unit = item.path("unit").asText();
-            String marketName = item.path("market_name").asText();
+            if (item == null) {
+                log.warn("KAMIS 개별 데이터가 null - 작물: {}", cropName);
+                return createRealisticPriceInfo(cropName);
+            }
+            
+            String priceStr = item.path("dpr1").asText(""); // 당일가격
+            String prevPriceStr = item.path("dpr7").asText(""); // 1주일전 가격
+            String unit = item.path("unit").asText("kg");
+            String marketName = item.path("market_name").asText("");
             String marketType = marketName.contains("도매") ? "도매" : "소매";
+            
+            log.debug("KAMIS 가격 데이터 파싱 - 작물: {}, 당일가격: {}, 1주전가격: {}, 단위: {}, 시장: {}", 
+                     cropName, priceStr, prevPriceStr, unit, marketName);
             
             double currentPrice = parsePrice(priceStr);
             double previousPrice = parsePrice(prevPriceStr);
             
+            // 가격이 모두 0이면 폴백 데이터 사용
+            if (currentPrice <= 0 && previousPrice <= 0) {
+                log.warn("KAMIS 가격 데이터가 유효하지 않음 (모두 0 또는 음수) - 작물: {}, 폴백 사용", cropName);
+                return createRealisticPriceInfo(cropName);
+            }
+            
+            // 현재 가격이 0이면 이전 가격 사용
+            if (currentPrice <= 0 && previousPrice > 0) {
+                currentPrice = previousPrice;
+                log.debug("현재 가격이 없어서 이전 가격 사용 - 작물: {}, 가격: {}", cropName, currentPrice);
+            }
+            
             // 가격 변동률 계산
             double priceChange = 0.0;
-            if (previousPrice > 0) {
+            if (previousPrice > 0 && currentPrice > 0) {
                 priceChange = ((currentPrice - previousPrice) / previousPrice) * 100;
             }
             
             String marketCondition = determineMarketCondition(priceChange);
             
-            log.info("KAMIS API 파싱 완료 - {}: 현재 {}원, 변동률 {}%", 
-                     cropName, currentPrice, String.format("%.1f", priceChange));
+            log.info("KAMIS API 파싱 완료 - {}: 현재 {}원, 이전 {}원, 변동률 {}%", 
+                     cropName, currentPrice, previousPrice, String.format("%.1f", priceChange));
             
             return PriceInfo.builder()
                     .cropName(cropName)
@@ -215,7 +281,7 @@ public class PriceApiClient {
                     .build();
                     
         } catch (Exception e) {
-            log.error("KAMIS 개별 데이터 파싱 실패: {}", e.getMessage());
+            log.error("KAMIS 개별 데이터 파싱 실패 - 작물: {}, 오류: {}", cropName, e.getMessage(), e);
             return createRealisticPriceInfo(cropName);
         }
     }
