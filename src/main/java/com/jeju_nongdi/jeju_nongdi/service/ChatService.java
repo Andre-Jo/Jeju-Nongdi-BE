@@ -313,6 +313,7 @@ public class ChatService {
                             .roomId(msg.getRoomId())
                             .senderId(msg.getSenderId())
                             .receiverId(msg.getReceiverId())
+                            .email(sender.getEmail())
                             .content(msg.getContent())
                             .createdAt(msg.getCreatedAt())
                             .senderNickname(sender.getNickname())

@@ -26,6 +26,9 @@ public class MessageDto {
     
     @Schema(description = "수신자 사용자 ID", example = "2")
     private Long receiverId;
+
+    @Schema(description = "이메일", example = "test@fee.com")
+    private String email;
     
     @Schema(description = "메시지 내용", example = "안녕하세요!")
     private String content;
