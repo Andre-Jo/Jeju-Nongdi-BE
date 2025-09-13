@@ -1,7 +1,7 @@
 package com.jeju_nongdi.jeju_nongdi.config;
 
 import com.jeju_nongdi.jeju_nongdi.security.JwtAuthenticationFilter;
-import com.jeju_nongdi.jeju_nongdi.service.CustomUserDetailsService;
+import com.jeju_nongdi.jeju_nongdi.prefernence.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

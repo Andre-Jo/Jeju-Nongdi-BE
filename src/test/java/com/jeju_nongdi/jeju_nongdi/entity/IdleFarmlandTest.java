@@ -1,10 +1,11 @@
 package com.jeju_nongdi.jeju_nongdi.entity;
 
+import com.jeju_nongdi.jeju_nongdi.auth.entity.User;
+import com.jeju_nongdi.jeju_nongdi.farmland.entity.IdleFarmland;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

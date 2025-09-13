@@ -1,12 +1,11 @@
 package com.jeju_nongdi.jeju_nongdi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jeju_nongdi.jeju_nongdi.dto.JobPostingMarkerResponse;
-import com.jeju_nongdi.jeju_nongdi.dto.JobPostingRequest;
-import com.jeju_nongdi.jeju_nongdi.dto.JobPostingResponse;
-import com.jeju_nongdi.jeju_nongdi.entity.JobPosting;
-import com.jeju_nongdi.jeju_nongdi.entity.User;
-import com.jeju_nongdi.jeju_nongdi.service.JobPostingService;
+import com.jeju_nongdi.jeju_nongdi.job.dto.JobPostingMarkerResponse;
+import com.jeju_nongdi.jeju_nongdi.job.dto.JobPostingRequest;
+import com.jeju_nongdi.jeju_nongdi.job.dto.JobPostingResponse;
+import com.jeju_nongdi.jeju_nongdi.job.entity.JobPosting;
+import com.jeju_nongdi.jeju_nongdi.job.service.JobPostingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

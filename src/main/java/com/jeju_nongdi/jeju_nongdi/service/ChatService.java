@@ -1,33 +1,26 @@
 package com.jeju_nongdi.jeju_nongdi.service;
 
-import com.jeju_nongdi.jeju_nongdi.dto.*;
+import com.jeju_nongdi.jeju_nongdi.auth.entity.User;
+import com.jeju_nongdi.jeju_nongdi.auth.repository.UserRepository;
 import com.jeju_nongdi.jeju_nongdi.dto.Chat.ChatRoomDto;
 import com.jeju_nongdi.jeju_nongdi.dto.Chat.ChatRoomView;
 import com.jeju_nongdi.jeju_nongdi.dto.Chat.MessageDto;
-import com.jeju_nongdi.jeju_nongdi.entity.*;
 import com.jeju_nongdi.jeju_nongdi.entity.Chat.ChatRoom;
 import com.jeju_nongdi.jeju_nongdi.entity.Chat.Message;
-import com.jeju_nongdi.jeju_nongdi.repository.*;
 import com.jeju_nongdi.jeju_nongdi.repository.Chat.ChatRoomRepository;
 import com.jeju_nongdi.jeju_nongdi.repository.Chat.MessageRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.HtmlUtils;
 
-import java.security.Principal;
 import java.util.*;
 import java.util.stream.Collectors;
 

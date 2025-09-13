@@ -1,11 +1,11 @@
 package com.jeju_nongdi.jeju_nongdi.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jeju_nongdi.jeju_nongdi.dto.AuthResponse;
-import com.jeju_nongdi.jeju_nongdi.dto.LoginRequest;
-import com.jeju_nongdi.jeju_nongdi.dto.SignupRequest;
-import com.jeju_nongdi.jeju_nongdi.entity.User;
-import com.jeju_nongdi.jeju_nongdi.repository.UserRepository;
+import com.jeju_nongdi.jeju_nongdi.auth.dto.AuthResponse;
+import com.jeju_nongdi.jeju_nongdi.auth.dto.LoginRequest;
+import com.jeju_nongdi.jeju_nongdi.auth.dto.SignupRequest;
+import com.jeju_nongdi.jeju_nongdi.auth.entity.User;
+import com.jeju_nongdi.jeju_nongdi.auth.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

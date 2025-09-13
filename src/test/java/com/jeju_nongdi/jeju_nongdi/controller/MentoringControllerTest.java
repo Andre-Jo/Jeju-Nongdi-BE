@@ -1,10 +1,11 @@
 package com.jeju_nongdi.jeju_nongdi.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jeju_nongdi.jeju_nongdi.dto.MentoringRequest;
-import com.jeju_nongdi.jeju_nongdi.dto.MentoringResponse;
-import com.jeju_nongdi.jeju_nongdi.entity.Mentoring;
-import com.jeju_nongdi.jeju_nongdi.service.MentoringService;
+import com.jeju_nongdi.jeju_nongdi.mentoring.dto.MentoringRequest;
+import com.jeju_nongdi.jeju_nongdi.mentoring.dto.MentoringResponse;
+import com.jeju_nongdi.jeju_nongdi.mentoring.entity.Mentoring;
+import com.jeju_nongdi.jeju_nongdi.mentoring.controller.MentoringController;
+import com.jeju_nongdi.jeju_nongdi.mentoring.service.MentoringService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

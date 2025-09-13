@@ -4,7 +4,7 @@ import com.jeju_nongdi.jeju_nongdi.dto.ApiResponse;
 import com.jeju_nongdi.jeju_nongdi.dto.Chat.ChatRoomDto;
 import com.jeju_nongdi.jeju_nongdi.dto.Chat.ChatRoomView;
 import com.jeju_nongdi.jeju_nongdi.dto.Chat.MessageDto;
-import com.jeju_nongdi.jeju_nongdi.entity.User;
+import com.jeju_nongdi.jeju_nongdi.auth.entity.User;
 import com.jeju_nongdi.jeju_nongdi.service.ChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

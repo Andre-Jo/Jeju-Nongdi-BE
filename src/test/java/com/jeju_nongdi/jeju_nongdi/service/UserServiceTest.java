@@ -1,12 +1,13 @@
 package com.jeju_nongdi.jeju_nongdi.service;
 
-import com.jeju_nongdi.jeju_nongdi.dto.AuthResponse;
-import com.jeju_nongdi.jeju_nongdi.dto.LoginRequest;
-import com.jeju_nongdi.jeju_nongdi.dto.SignupRequest;
-import com.jeju_nongdi.jeju_nongdi.entity.User;
+import com.jeju_nongdi.jeju_nongdi.auth.dto.AuthResponse;
+import com.jeju_nongdi.jeju_nongdi.auth.dto.LoginRequest;
+import com.jeju_nongdi.jeju_nongdi.auth.dto.SignupRequest;
+import com.jeju_nongdi.jeju_nongdi.auth.entity.User;
+import com.jeju_nongdi.jeju_nongdi.auth.service.UserService;
 import com.jeju_nongdi.jeju_nongdi.exception.EmailAlreadyExistsException;
 import com.jeju_nongdi.jeju_nongdi.exception.NicknameAlreadyExistsException;
-import com.jeju_nongdi.jeju_nongdi.repository.UserRepository;
+import com.jeju_nongdi.jeju_nongdi.auth.repository.UserRepository;
 import com.jeju_nongdi.jeju_nongdi.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

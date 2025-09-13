@@ -1,11 +1,13 @@
 package com.jeju_nongdi.jeju_nongdi.service;
 
-import com.jeju_nongdi.jeju_nongdi.dto.IdleFarmlandMarkerResponse;
-import com.jeju_nongdi.jeju_nongdi.dto.IdleFarmlandRequest;
-import com.jeju_nongdi.jeju_nongdi.dto.IdleFarmlandResponse;
-import com.jeju_nongdi.jeju_nongdi.entity.IdleFarmland;
-import com.jeju_nongdi.jeju_nongdi.entity.User;
-import com.jeju_nongdi.jeju_nongdi.repository.IdleFarmlandRepository;
+import com.jeju_nongdi.jeju_nongdi.auth.service.UserService;
+import com.jeju_nongdi.jeju_nongdi.farmland.dto.IdleFarmlandMarkerResponse;
+import com.jeju_nongdi.jeju_nongdi.farmland.dto.IdleFarmlandRequest;
+import com.jeju_nongdi.jeju_nongdi.farmland.dto.IdleFarmlandResponse;
+import com.jeju_nongdi.jeju_nongdi.farmland.entity.IdleFarmland;
+import com.jeju_nongdi.jeju_nongdi.auth.entity.User;
+import com.jeju_nongdi.jeju_nongdi.farmland.service.IdleFarmlandService;
+import com.jeju_nongdi.jeju_nongdi.farmland.repository.IdleFarmlandRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

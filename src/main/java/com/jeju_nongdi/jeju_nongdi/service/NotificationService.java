@@ -4,7 +4,7 @@ import com.jeju_nongdi.jeju_nongdi.dto.NotificationDto;
 import com.jeju_nongdi.jeju_nongdi.entity.Notification;
 import com.jeju_nongdi.jeju_nongdi.entity.Notification.NotificationType;
 import com.jeju_nongdi.jeju_nongdi.repository.NotificationRepository;
-import com.jeju_nongdi.jeju_nongdi.repository.UserRepository;
+import com.jeju_nongdi.jeju_nongdi.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.security.access.AccessDeniedException;

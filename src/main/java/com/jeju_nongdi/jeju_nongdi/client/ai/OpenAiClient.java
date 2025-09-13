@@ -1,7 +1,7 @@
 package com.jeju_nongdi.jeju_nongdi.client.ai;
 
 import com.jeju_nongdi.jeju_nongdi.client.price.PriceInfo;
-import com.jeju_nongdi.jeju_nongdi.entity.UserPreference;
+import com.jeju_nongdi.jeju_nongdi.prefernence.entity.UserPreference;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

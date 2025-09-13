@@ -1,6 +1,6 @@
 package com.jeju_nongdi.jeju_nongdi.security;
 
-import com.jeju_nongdi.jeju_nongdi.service.CustomUserDetailsService;
+import com.jeju_nongdi.jeju_nongdi.prefernence.service.CustomUserDetailsService;
 import com.jeju_nongdi.jeju_nongdi.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

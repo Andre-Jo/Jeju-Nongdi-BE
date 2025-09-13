@@ -1,5 +1,6 @@
 package com.jeju_nongdi.jeju_nongdi.entity;
 
+import com.jeju_nongdi.jeju_nongdi.auth.entity.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

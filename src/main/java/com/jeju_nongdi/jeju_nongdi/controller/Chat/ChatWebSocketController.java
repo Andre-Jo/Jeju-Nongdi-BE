@@ -1,7 +1,7 @@
 package com.jeju_nongdi.jeju_nongdi.controller.Chat;
 
 import com.jeju_nongdi.jeju_nongdi.dto.Chat.SimpleMessagePayloadDTO;
-import com.jeju_nongdi.jeju_nongdi.entity.User;
+import com.jeju_nongdi.jeju_nongdi.auth.entity.User;
 import com.jeju_nongdi.jeju_nongdi.service.ChatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

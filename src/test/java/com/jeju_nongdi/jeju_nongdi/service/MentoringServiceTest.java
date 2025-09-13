@@ -1,11 +1,12 @@
 package com.jeju_nongdi.jeju_nongdi.service;
 
-import com.jeju_nongdi.jeju_nongdi.dto.MentoringRequest;
-import com.jeju_nongdi.jeju_nongdi.dto.MentoringResponse;
-import com.jeju_nongdi.jeju_nongdi.entity.Mentoring;
-import com.jeju_nongdi.jeju_nongdi.entity.User;
-import com.jeju_nongdi.jeju_nongdi.repository.MentoringRepository;
-import com.jeju_nongdi.jeju_nongdi.repository.UserRepository;
+import com.jeju_nongdi.jeju_nongdi.mentoring.dto.MentoringRequest;
+import com.jeju_nongdi.jeju_nongdi.mentoring.dto.MentoringResponse;
+import com.jeju_nongdi.jeju_nongdi.mentoring.entity.Mentoring;
+import com.jeju_nongdi.jeju_nongdi.auth.entity.User;
+import com.jeju_nongdi.jeju_nongdi.mentoring.service.MentoringService;
+import com.jeju_nongdi.jeju_nongdi.mentoring.repository.MentoringRepository;
+import com.jeju_nongdi.jeju_nongdi.auth.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
