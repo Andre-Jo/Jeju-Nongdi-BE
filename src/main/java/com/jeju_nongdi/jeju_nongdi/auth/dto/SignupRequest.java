@@ -3,7 +3,6 @@ package com.jeju_nongdi.jeju_nongdi.auth.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 @Schema(description = "회원가입 요청 정보")
@@ -28,10 +27,6 @@ public record SignupRequest (
         String nickname,
 
         @Schema(description = "프로필 이미지 URL 첨부", example = "http://abcdef.com")
-        String profileImage,
-        
-        @Schema(description = "전화번호 (010으로 시작하는 11자리)", example = "01012345678")
-        @NotBlank(message = "전화번호는 필수입니다")
-        @Pattern(regexp = "^010\\d{8}$", message = "올바른 전화번호 형식을 입력해주세요 (010xxxxxxxx)")
-        String phone
+        String profileImage
+
 ) {}
